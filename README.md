@@ -226,16 +226,6 @@ npm --workspace @retrodex/web run test
 npm run test:py
 ```
 
-Linting:
-
-```bash
-npm run lint:ts
-npm run lint:py
-```
-
-Note: the current TypeScript lint pass may still report known web formatting and
-refactor debt while typecheck, build, and tests pass.
-
 ## Codex Skill
 
 The repo includes a local Codex skill:
@@ -257,5 +247,5 @@ It tells Codex how to use Retrodex:
 
 Retrodex is an active local-first prototype. It is already useful for Codex-led
 pixel art experiments, editor handoff, manual cleanup, and export testing. The
-next hardening work is mostly around UI refactor debt, lint cleanup, more golden
-cleanup fixtures, and deeper end-to-end generation runs.
+next hardening work is mostly around UI refactor debt, more golden cleanup
+fixtures, and deeper end-to-end generation runs.

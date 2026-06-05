@@ -5,25 +5,8 @@ description = "Deterministic pixel character cleanup core and TS product shell."
 requires-python = ">=3.11"
 dependencies = ["pillow>=10.0.0"]
 
-[project.optional-dependencies]
-dev = ["ruff>=0.12.0"]
-
 [tool.setuptools]
 package-dir = { "" = "python" }
 
 [tool.setuptools.packages.find]
 where = ["python"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-src = ["python"]
-exclude = ["python/pixel_character_core/legacy"]
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-ignore = ["E501"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"

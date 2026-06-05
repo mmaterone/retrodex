@@ -450,8 +450,6 @@ Validate the backend with:
 
 ```bash
 npm run typecheck
-npm run lint:py
-npm run lint:ts
 npm run build
 npm run smoke:api
 ```

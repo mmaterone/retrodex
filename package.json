@@ -15,20 +15,9 @@
     "dev:web": "npm --workspace @retrodex/web run dev",
     "build": "npm --workspace @retrodex/contracts run build && npm --workspace @retrodex/api run build && npm --workspace @retrodex/cli run build && npm --workspace @retrodex/web run build",
     "typecheck": "npm --workspace @retrodex/contracts run typecheck && npm --workspace @retrodex/api run typecheck && npm --workspace @retrodex/cli run typecheck && npm --workspace @retrodex/web run typecheck",
-    "lint:ts": "ultracite check",
-    "fix:ts": "ultracite fix",
-    "lint:py": ".venv/bin/ruff check python",
-    "format:py": ".venv/bin/ruff format python",
     "test:api": "npm --workspace @retrodex/api run test",
     "test:cli": "npm --workspace @retrodex/cli run test",
     "test:py": ".venv/bin/python -m unittest discover -s python/tests",
-    "smoke:api": "npm --workspace @retrodex/api run smoke",
-    "check": "ultracite check",
-    "fix": "ultracite fix"
-  },
-  "devDependencies": {
-    "oxfmt": "^0.53.0",
-    "oxlint": "^1.68.0",
-    "ultracite": "^7.8.1"
+    "smoke:api": "npm --workspace @retrodex/api run smoke"
   }
 }

@@ -2,8 +2,6 @@
 
 Current setup decisions were checked against upstream docs on 2026-06-04.
 
-- Ultracite supports Oxlint + Oxfmt and can be initialized with
-  `npx ultracite init --quiet --linter oxlint --pm npm --frameworks react`.
 - shadcn/ui supports Vite projects and recommends `shadcn@latest init -t vite`
   for new Vite scaffolds.
 - Motion for React installs as `motion` and imports React APIs from
