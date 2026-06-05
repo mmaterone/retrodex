@@ -2,18 +2,6 @@
 
 Use Codex as an agent-powered pixel art editor.
 
-<video
-  src="./docs/assets/retrodex-codex-morph.webm"
-  autoplay
-  loop
-  muted
-  playsinline
-  controls
-  width="100%"
-></video>
-
-[Watch the Retrodex morph demo](./docs/assets/retrodex-codex-morph.webm)
-
 Retrodex is a local desktop run engine, browser editor, and agent CLI for
 creating, cleaning, inspecting, editing, animating, and exporting pixel art with
 Codex in the loop. The goal is simple: Codex can generate or modify sprites like
