@@ -1,7 +1,12 @@
-<img width="192" height="192" alt="retrodex-mq1kz2hl" src="https://github.com/user-attachments/assets/4cee956c-64cd-45c5-bf96-bd164db9c96a" />
+<p align="center">
+  <img width="192" height="192" alt="retrodex-mq1kz2hl" src="https://github.com/user-attachments/assets/4cee956c-64cd-45c5-bf96-bd164db9c96a" />
+</p>
 
-# Retrodex
-Use Codex as an agent-powered pixel art editor.
+<h1 align="center">Retrodex</h1>
+
+<p align="center">
+  Use Codex as an agent-powered pixel art editor.
+</p>
 
 Retrodex is a local desktop run engine, browser editor, and agent CLI for
 creating, cleaning, inspecting, editing, animating, and exporting pixel art with
