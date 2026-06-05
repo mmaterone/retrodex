@@ -1,0 +1,186 @@
+.reference-panel {
+  position: fixed;
+  z-index: 12;
+  display: grid;
+  width: min(420px, calc(100dvw - 48px));
+  height: 430px;
+  min-width: 260px;
+  min-height: 180px;
+  max-width: calc(100dvw - 48px);
+  max-height: calc(100dvh - 140px);
+  grid-template-rows: 42px minmax(0, 1fr) auto;
+  overflow: hidden;
+  resize: none;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 18px;
+  background: rgb(35 36 40 / 0.9);
+  box-shadow:
+    0 18px 52px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.reference-resize-hit {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 22px;
+  height: 22px;
+  border-right: 2px solid rgb(236 238 241 / 0.34);
+  border-bottom: 2px solid rgb(236 238 241 / 0.34);
+  border-radius: 0 0 14px 0;
+  cursor: nwse-resize;
+  pointer-events: none;
+}
+
+.reference-panel:hover .reference-resize-hit {
+  border-color: rgb(122 190 255 / 0.72);
+}
+
+.reference-panel.minimized {
+  width: 260px;
+  height: 42px;
+  min-height: 42px;
+  resize: none;
+}
+
+.reference-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  cursor: grab;
+  user-select: none;
+}
+
+.reference-header:active {
+  cursor: grabbing;
+}
+
+.reference-title {
+  overflow: hidden;
+  color: rgb(245 247 250 / 0.82);
+  font:
+    600 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.reference-actions button {
+  display: grid;
+  height: 30px;
+  min-width: 30px;
+  place-items: center;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 11px;
+  color: rgb(236 238 241 / 0.72);
+  background: transparent;
+  font:
+    600 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.reference-actions button:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.reference-actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+.reference-viewport {
+  min-height: 0;
+  overflow: hidden;
+  background: #1f2024;
+}
+
+.reference-canvas {
+  position: static;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #1f2024;
+  cursor: copy;
+  image-rendering: pixelated;
+  touch-action: none;
+  transform: none;
+}
+
+.reference-palette {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 48px;
+  align-items: center;
+  align-content: start;
+  gap: 6px;
+  padding: 8px;
+  overflow: hidden auto;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  scrollbar-width: thin;
+}
+
+.reference-swatch {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 7px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.36),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.reference-swatch:hover,
+.reference-actions button:focus-visible,
+.reference-swatch:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.36),
+    0 0 0 2px rgb(122 190 255 / 0.48);
+}
+
+.reference-empty {
+  color: rgb(236 238 241 / 0.44);
+  font:
+    600 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.reference-file {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

@@ -1,0 +1,221 @@
+.color-panel {
+  position: fixed;
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px));
+  left: 50%;
+  z-index: 11;
+  display: grid;
+  width: min(360px, calc(100dvw - 48px));
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 20px;
+  background: rgb(35 36 40 / 0.94);
+  box-shadow:
+    0 22px 54px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  transform: translateX(-50%);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.color-box {
+  position: relative;
+  aspect-ratio: 1.52;
+  width: 100%;
+  min-height: 168px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, transparent, #000),
+    linear-gradient(90deg, #fff, var(--hue-color));
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.72);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.color-box span {
+  position: absolute;
+  top: var(--picker-y);
+  left: var(--picker-x);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.76),
+    0 3px 10px rgb(0 0 0 / 0.42);
+  transform: translate(-50%, -50%);
+}
+
+.color-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgb(245 247 250 / 0.82);
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.color-panel-head button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: rgb(236 238 241 / 0.62);
+  background: transparent;
+}
+
+.color-panel-head button:hover,
+.color-panel-head button:focus-visible {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+  outline: none;
+}
+
+.color-panel-head svg {
+  width: 15px;
+  height: 15px;
+}
+
+.hex-field {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 14px;
+  color: rgb(236 238 241 / 0.56);
+  background: rgb(0 0 0 / 0.2);
+  font:
+    650 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.hex-field input {
+  min-width: 0;
+  border: 0;
+  color: rgb(245 247 250 / 0.92);
+  background: transparent;
+  font:
+    650 13px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0;
+  outline: none;
+  text-transform: uppercase;
+}
+
+.color-controls-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.color-preview {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.hue-slider {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.18),
+    0 0 0 1px rgb(0 0 0 / 0.42);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.hue-slider span {
+  position: absolute;
+  top: 50%;
+  left: var(--hue-x);
+  width: 20px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.62),
+    0 2px 8px rgb(0 0 0 / 0.42);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.quick-colors {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.quick-colors::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-colors button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.24);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.quick-colors button.add-color {
+  color: rgb(236 238 241 / 0.72);
+  background: rgb(255 255 255 / 0.07);
+}
+
+.quick-colors button.add-color svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quick-colors button.add-color:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.12);
+}
+
+.quick-colors button.active,
+.quick-colors button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(122 190 255 / 0.62),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}

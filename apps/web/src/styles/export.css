@@ -1,0 +1,327 @@
+.export-open-button {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 13;
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 999px;
+  color: rgb(245 247 250 / 0.9);
+  background: rgb(39 40 43 / 0.82);
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  font:
+    650 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.export-open-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.export-open-button:hover,
+.export-open-button:focus-visible {
+  color: #fff;
+  background: rgb(52 54 59 / 0.9);
+  outline: none;
+}
+
+.export-dialog {
+  display: grid;
+  width: min(760px, calc(100dvw - 40px));
+  max-height: min(720px, calc(100dvh - 40px));
+  grid-template-columns: minmax(220px, 1fr) minmax(250px, 0.8fr);
+  gap: 14px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 24px;
+  background: rgb(31 32 36 / 0.96);
+  box-shadow:
+    0 26px 80px rgb(0 0 0 / 0.52),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.export-header {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  color: rgb(245 247 250 / 0.9);
+  font:
+    700 14px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.export-submit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.export-preview {
+  display: grid;
+  min-height: 260px;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 18px;
+  background-color: #242528;
+  background-image:
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.04) 25%,
+      transparent 25% 75%,
+      rgb(255 255 255 / 0.04) 75%
+    ),
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.04) 25%,
+      transparent 25% 75%,
+      rgb(255 255 255 / 0.04) 75%
+    );
+  background-position:
+    0 0,
+    8px 8px;
+  background-size: 16px 16px;
+}
+
+.export-preview canvas {
+  position: static;
+  inset: auto;
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  touch-action: auto;
+  transform: none;
+  transform-origin: center center;
+  will-change: auto;
+}
+
+.export-preview span {
+  color: rgb(236 238 241 / 0.58);
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.export-controls {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.export-control {
+  display: grid;
+  gap: 6px;
+  color: rgb(236 238 241 / 0.58);
+  font:
+    650 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.export-hint,
+.export-status {
+  margin: 0;
+  color: rgb(236 238 241 / 0.5);
+  font:
+    600 11px/1.35 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.export-status {
+  grid-column: 1 / -1;
+  padding: 0 4px;
+  color: rgb(245 247 250 / 0.72);
+}
+
+.export-select {
+  width: 100%;
+  height: 38px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 13px;
+  color: rgb(245 247 250 / 0.88);
+  background: rgb(255 255 255 / 0.055);
+  color-scheme: dark;
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  outline: none;
+}
+
+.export-select:disabled {
+  color: rgb(236 238 241 / 0.34);
+  background: rgb(0 0 0 / 0.16);
+}
+
+.export-folder-row {
+  display: block;
+}
+
+.export-folder-input {
+  height: 38px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 13px;
+  color: rgb(245 247 250 / 0.88);
+  background: rgb(255 255 255 / 0.055);
+  color-scheme: dark;
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-folder-input:focus-visible {
+  border-color: rgb(122 190 255 / 0.5);
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(122 190 255 / 0.22);
+}
+
+.export-frame-strip {
+  display: flex;
+  grid-column: 1 / -1;
+  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: none;
+}
+
+.export-frame-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.export-frame-strip button {
+  display: grid;
+  grid-template-rows: 58px 18px;
+  width: 74px;
+  height: 82px;
+  flex: 0 0 auto;
+  place-items: center;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 16px;
+  color: rgb(236 238 241 / 0.62);
+  background: rgb(255 255 255 / 0.055);
+}
+
+.export-frame-strip button.active,
+.export-frame-strip button:hover {
+  border-color: rgb(122 190 255 / 0.62);
+  color: #fff;
+  background: rgb(122 190 255 / 0.13);
+}
+
+.export-frame-strip button.excluded {
+  opacity: 0.45;
+  border-color: rgb(255 255 255 / 0.07);
+  color: rgb(236 238 241 / 0.46);
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 46%,
+      rgb(255 255 255 / 0.2) 47% 53%,
+      transparent 54% 100%
+    ),
+    rgb(255 255 255 / 0.035);
+}
+
+.export-frame-strip button.excluded:hover {
+  opacity: 0.72;
+}
+
+.export-frame-strip button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(122 190 255 / 0.42);
+}
+
+.export-frame-strip span {
+  font:
+    650 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.export-submit {
+  display: flex;
+  grid-column: 1 / -1;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 15px;
+  color: #fff;
+  background: rgb(122 190 255 / 0.28);
+  font:
+    700 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.export-submit > span[aria-hidden] {
+  background: rgb(122 190 255 / 0.28);
+}
+
+.export-submit:hover,
+.export-submit:focus-visible {
+  background: rgb(122 190 255 / 0.36);
+  outline: none;
+}
+
+.export-submit:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}

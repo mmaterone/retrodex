@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrodex.local/schemas/frame.schema.json",
+  "title": "Retrodex Frame",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "index",
+    "name",
+    "path",
+    "canvas",
+    "approved",
+    "approvedAt",
+    "alphaBBox",
+    "anchor",
+    "palette",
+    "source",
+    "qc"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "2026-06-04.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "index": { "type": "integer", "minimum": 0 },
+    "name": { "type": "string", "minLength": 1 },
+    "path": { "type": "string", "minLength": 1 },
+    "approved": { "type": "boolean", "default": false },
+    "approvedAt": {
+      "anyOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "canvas": { "$ref": "run.schema.json#/$defs/canvas" },
+    "alphaBBox": {
+      "anyOf": [{ "$ref": "#/$defs/bbox" }, { "type": "null" }]
+    },
+    "anchor": { "$ref": "#/$defs/anchor" },
+    "palette": {
+      "type": "object",
+      "required": ["colors", "lockedTo"],
+      "properties": {
+        "colors": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+        },
+        "lockedTo": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "user-edited",
+            "imagegen-raw",
+            "cleanup-output",
+            "rig-render",
+            "imported"
+          ]
+        },
+        "inputPath": { "type": "string" },
+        "jobId": { "type": "string" },
+        "cleanupRunId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "qc": { "$ref": "run.schema.json#/$defs/qc" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "bbox": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["mode", "x", "y"],
+      "properties": {
+        "mode": { "enum": ["center", "bottom", "feet", "custom"] },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

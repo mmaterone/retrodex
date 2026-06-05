@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrodex.local/schemas/saved-animation.schema.json",
+  "title": "Retrodex Saved Animation",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "runId",
+    "name",
+    "slug",
+    "fps",
+    "canvas",
+    "approval",
+    "frames",
+    "files",
+    "exports",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "2026-06-04.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "runId": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string", "minLength": 1 },
+    "fps": { "type": "integer", "minimum": 1 },
+    "canvas": { "$ref": "run.schema.json#/$defs/canvas" },
+    "approval": {
+      "type": "object",
+      "required": ["approvedFrames"],
+      "properties": {
+        "approvedFrames": {
+          "type": "array",
+          "items": { "$ref": "run.schema.json#/$defs/frameApproval" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["savedPath", "sourceFrameId", "sourcePath", "index"],
+        "properties": {
+          "savedPath": { "type": "string" },
+          "sourceFrameId": { "type": "string" },
+          "sourcePath": { "type": "string" },
+          "index": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "stripTransparent",
+        "preview",
+        "gif",
+        "contactSheet",
+        "draft",
+        "manifest",
+        "validation",
+        "editorDiff",
+        "shareBundle",
+        "webp",
+        "svg",
+        "tgs",
+        "tgsMetadata",
+        "lottie",
+        "react",
+        "css"
+      ],
+      "properties": {
+        "stripTransparent": { "type": "string" },
+        "preview": { "type": "string" },
+        "gif": { "type": "string" },
+        "contactSheet": { "type": "string" },
+        "draft": { "type": "string" },
+        "manifest": { "type": "string" },
+        "validation": { "type": "string" },
+        "editorDiff": { "type": "string" },
+        "shareBundle": { "type": "string" },
+        "webp": { "type": "string" },
+        "svg": { "type": "string" },
+        "tgs": { "type": "string" },
+        "tgsMetadata": { "type": "string" },
+        "lottie": { "type": "string" },
+        "react": { "type": "string" },
+        "css": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "exports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "path"],
+        "properties": {
+          "target": {
+            "enum": [
+              "raw-frames",
+              "game-strip",
+              "texturepacker",
+              "aseprite",
+              "godot",
+              "webp",
+              "svg",
+              "tgs",
+              "lottie",
+              "react",
+              "css"
+            ]
+          },
+          "path": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

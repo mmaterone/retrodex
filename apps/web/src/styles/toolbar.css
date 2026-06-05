@@ -1,0 +1,185 @@
+.toolbar {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(24px, env(safe-area-inset-left));
+  z-index: 10;
+  display: flex;
+  width: fit-content;
+  max-width: calc(100dvw - 48px);
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0 auto;
+  padding: 6px;
+  overflow: visible;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 24px;
+  background: rgb(39 40 43 / 0.82);
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 0.36),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.tool-menu-host {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.tool-menu {
+  position: absolute;
+  bottom: 58px;
+  left: 50%;
+  display: grid;
+  min-width: 172px;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(37 38 42 / 0.94);
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+  transform: translateX(-50%);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.tool-menu-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  color: rgb(236 238 241 / 0.76);
+  font:
+    500 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  text-align: left;
+  background: transparent;
+}
+
+.tool-menu-item svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tool-menu-item:hover,
+.tool-menu-item.active {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.tool {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 16px;
+  color: rgb(236 238 241 / 0.72);
+  background: transparent;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tool svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.tool:hover {
+  color: rgb(255 255 255 / 0.94);
+  background: rgb(255 255 255 / 0.07);
+}
+
+.tool[data-tooltip]::before,
+.tool[data-tooltip]::after {
+  position: absolute;
+  left: 50%;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.tool[data-tooltip]::before {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 12px);
+  width: max-content;
+  max-width: 180px;
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 10px;
+  color: rgb(245 247 250 / 0.94);
+  background: rgb(24 25 28 / 0.96);
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 0.34),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  font:
+    700 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  text-align: center;
+  transform: translate(-50%, 4px);
+  white-space: nowrap;
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.tool[data-tooltip]::after {
+  content: "";
+  bottom: calc(100% + 6px);
+  border: 6px solid transparent;
+  border-top-color: rgb(24 25 28 / 0.96);
+  transform: translate(-50%, 4px);
+}
+
+.tool[data-tooltip]:hover::before,
+.tool[data-tooltip]:hover::after,
+.tool[data-tooltip]:focus-visible::before,
+.tool[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.tool:focus-visible {
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.28);
+}
+
+.tool.active {
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.08)),
+    rgb(255 255 255 / 0.08);
+}
+
+.color-tool {
+  grid-template-columns: 1fr;
+}
+
+.color-swatch {
+  position: absolute;
+  right: 9px;
+  bottom: 8px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgb(255 255 255 / 0.68);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55);
+}

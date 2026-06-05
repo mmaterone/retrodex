@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrodex.local/schemas/animation-draft.schema.json",
+  "title": "Retrodex Animation Draft",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "runId",
+    "fps",
+    "canvasSize",
+    "framesList",
+    "frames",
+    "rigParts",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "2026-06-04.v1" },
+    "runId": { "type": "string", "minLength": 1 },
+    "fps": { "type": "integer", "minimum": 1 },
+    "canvasSize": { "$ref": "run.schema.json#/$defs/canvas" },
+    "framesList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "frames": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["frameId", "framePath", "transforms"],
+        "properties": {
+          "frameId": { "type": "string" },
+          "framePath": { "type": "string" },
+          "transforms": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/transform" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rigParts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color",
+          "maskPath",
+          "bbox",
+          "anchor",
+          "parentId",
+          "pinned"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+          "maskPath": { "type": ["string", "null"] },
+          "bbox": {
+            "anyOf": [
+              { "$ref": "frame.schema.json#/$defs/bbox" },
+              { "type": "null" }
+            ]
+          },
+          "anchor": { "$ref": "frame.schema.json#/$defs/anchor" },
+          "parentId": { "type": ["string", "null"] },
+          "pinned": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "transform": {
+      "type": "object",
+      "required": ["x", "y", "scale", "rotate"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "scale": { "type": "number", "exclusiveMinimum": 0 },
+        "rotate": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

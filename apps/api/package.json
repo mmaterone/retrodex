@@ -1,0 +1,23 @@
+{
+  "name": "@retrodex/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/server.ts",
+    "smoke": "tsx src/smoke-test.ts",
+    "test": "node --import tsx --test src/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@retrodex/contracts": "file:../../packages/contracts",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "ajv": "^8.20.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

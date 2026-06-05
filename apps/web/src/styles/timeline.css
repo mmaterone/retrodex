@@ -1,0 +1,334 @@
+.timeline-toggle {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 11;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 22px;
+  color: rgb(236 238 241 / 0.82);
+  background: rgb(39 40 43 / 0.84);
+  box-shadow:
+    0 16px 42px rgb(0 0 0 / 0.34),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.timeline-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
+.timeline-toggle:hover,
+.timeline-toggle:focus-visible {
+  color: #fff;
+  background: rgb(52 54 59 / 0.92);
+}
+
+.timeline-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 16px 42px rgb(0 0 0 / 0.34),
+    0 0 0 2px rgb(122 190 255 / 0.44),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.timeline {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 88px));
+  left: max(24px, env(safe-area-inset-left));
+  z-index: 9;
+  display: grid;
+  height: 118px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 24px;
+  background: rgb(31 32 36 / 0.9);
+  box-shadow:
+    0 20px 54px rgb(0 0 0 / 0.4),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+  transform: translateY(calc(100% + 112px));
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+  opacity: 0;
+  backdrop-filter: blur(18px) saturate(1.2);
+  pointer-events: none;
+}
+
+.timeline.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.timeline-strip {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.timeline-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.timeline-play,
+.timeline-frame,
+.timeline-add {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  color: rgb(236 238 241 / 0.72);
+  background: rgb(255 255 255 / 0.055);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.timeline-play {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+.timeline-play.active {
+  border-color: rgb(122 190 255 / 0.56);
+  color: #fff;
+  background: rgb(122 190 255 / 0.16);
+}
+
+.timeline-play svg {
+  width: 19px;
+  height: 19px;
+}
+
+.timeline-fps-control {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+  color: rgb(246 247 248 / 0.9);
+  background: rgb(255 255 255 / 0.075);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 10px 26px rgb(0 0 0 / 0.18);
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-fps-control button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  color: rgb(236 238 241 / 0.62);
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.timeline-fps-control button:hover,
+.timeline-fps-control button:focus-visible {
+  color: #fff;
+  background: rgb(255 255 255 / 0.09);
+}
+
+.timeline-fps-control button:focus-visible {
+  outline: 2px solid rgb(122 190 255 / 0.74);
+  outline-offset: 2px;
+}
+
+.timeline-fps-control svg {
+  width: 17px;
+  height: 17px;
+}
+
+.timeline-frame {
+  grid-template-rows: 58px 18px;
+  width: 74px;
+  height: 82px;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 16px;
+  cursor: grab;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+  user-select: none;
+}
+
+.timeline-frame.dragging {
+  cursor: grabbing;
+  opacity: 0.82;
+  transform: translateY(-4px) scale(1.03);
+}
+
+.timeline-frame.magnetic:not(.dragging) {
+  border-color: rgb(122 190 255 / 0.42);
+  background: rgb(122 190 255 / 0.1);
+  transform: translateY(-2px);
+}
+
+.timeline-frame.active {
+  border-color: rgb(122 190 255 / 0.68);
+  color: #fff;
+  background: rgb(122 190 255 / 0.13);
+  box-shadow:
+    0 0 0 1px rgb(122 190 255 / 0.18),
+    inset 0 1px 0 rgb(255 255 255 / 0.1);
+}
+
+.timeline-play:hover,
+.timeline-frame:hover,
+.timeline-add:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.09);
+}
+
+.timeline-play:focus-visible,
+.timeline-frame:focus-visible,
+.timeline-add:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(122 190 255 / 0.44),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.timeline-thumbnail {
+  position: static;
+  inset: auto;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 10px;
+  background-color: #242528;
+  background-image:
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.05) 25%,
+      transparent 25% 75%,
+      rgb(255 255 255 / 0.05) 75%
+    ),
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.05) 25%,
+      transparent 25% 75%,
+      rgb(255 255 255 / 0.05) 75%
+    );
+  background-position:
+    0 0,
+    5px 5px;
+  background-size: 10px 10px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  transform: none;
+}
+
+.timeline-frame span {
+  font:
+    650 11px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.timeline-add {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+.timeline-add svg {
+  width: 20px;
+  height: 20px;
+}
+
+.timeline-context-menu {
+  position: fixed;
+  top: var(--menu-y);
+  left: var(--menu-x);
+  z-index: 40;
+  display: grid;
+  min-width: 164px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(31 32 36 / 0.94);
+  box-shadow:
+    0 18px 46px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.timeline-context-menu-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  color: rgb(236 238 241 / 0.86);
+  background: transparent;
+  font:
+    650 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.timeline-context-menu-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.timeline-context-menu-item:hover,
+.timeline-context-menu-item:focus-visible {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+  outline: none;
+}
+
+.timeline-context-menu-item.danger {
+  color: rgb(255 145 145 / 0.96);
+}
+
+.timeline-context-menu-item.danger:hover,
+.timeline-context-menu-item.danger:focus-visible {
+  color: #fff;
+  background: rgb(255 80 80 / 0.18);
+}
+
+.timeline-context-menu-item:disabled {
+  cursor: not-allowed;
+  color: rgb(236 238 241 / 0.28);
+  background: transparent;
+}

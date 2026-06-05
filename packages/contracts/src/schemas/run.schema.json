@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrodex.local/schemas/run.schema.json",
+  "title": "Retrodex Run",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "asset",
+    "approval",
+    "canvas",
+    "presetId",
+    "status",
+    "paths",
+    "activeFrameIds",
+    "qc",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "2026-06-04.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "presetId": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": [
+        "planned",
+        "awaiting-generation",
+        "raw-ready",
+        "cleaning",
+        "review",
+        "approved",
+        "exported",
+        "rejected"
+      ]
+    },
+    "asset": {
+      "type": "object",
+      "required": ["type", "action", "view", "style", "frames", "sheet"],
+      "properties": {
+        "type": {
+          "enum": [
+            "background",
+            "character",
+            "fx",
+            "icon",
+            "projectile",
+            "prop",
+            "tile"
+          ]
+        },
+        "action": { "type": "string", "minLength": 1 },
+        "view": { "enum": ["side", "topdown", "three-quarter", "front"] },
+        "style": {
+          "enum": ["pixel-art", "retro", "clean-hd", "pixel-inspired"]
+        },
+        "frames": { "type": "integer", "minimum": 1 },
+        "sheet": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "canvas": { "$ref": "#/$defs/canvas" },
+    "paths": {
+      "type": "object",
+      "required": [
+        "root",
+        "framesDir",
+        "masksDir",
+        "pipelineDir",
+        "diagnosticsDir",
+        "exportsDir"
+      ],
+      "properties": {
+        "root": { "type": "string" },
+        "framesDir": { "type": "string" },
+        "masksDir": { "type": "string" },
+        "pipelineDir": { "type": "string" },
+        "diagnosticsDir": { "type": "string" },
+        "exportsDir": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "activeFrameIds": { "type": "array", "items": { "type": "string" } },
+    "approval": {
+      "type": "object",
+      "required": ["approvedFrames", "updatedAt"],
+      "properties": {
+        "approvedFrames": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/frameApproval" }
+        },
+        "updatedAt": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "palettePath": { "type": ["string", "null"] },
+    "qc": { "$ref": "#/$defs/qc" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "canvas": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "qc": {
+      "type": "object",
+      "required": ["passes", "blockingIssues", "warnings", "retryHints"],
+      "properties": {
+        "passes": { "type": "boolean" },
+        "blockingIssues": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "retryHints": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "frameApproval": {
+      "type": "object",
+      "required": ["frameId", "approvedAt", "approvedBy"],
+      "properties": {
+        "frameId": { "type": "string", "minLength": 1 },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "approvedBy": { "enum": ["user", "agent", "system"] },
+        "note": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

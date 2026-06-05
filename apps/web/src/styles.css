@@ -1,0 +1,462 @@
+@import "tailwindcss";
+@import "./styles/export.css";
+@import "./styles/canvas-stage.css";
+@import "./styles/panels.css";
+@import "./styles/masks.css";
+@import "./styles/reference.css";
+@import "./styles/timeline.css";
+@import "./styles/toolbar.css";
+@import "./styles/color.css";
+
+@theme inline {
+  --color-background: var(--pcc-background);
+  --color-foreground: var(--pcc-foreground);
+  --color-muted-foreground: var(--pcc-muted-foreground);
+  --color-border: var(--pcc-border);
+  --color-accent: var(--pcc-accent);
+  --color-hover: var(--pcc-hover);
+  --color-active: var(--pcc-active);
+  --color-destructive: var(--pcc-destructive);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
+  --shadow-surface-1: var(--shadow-1);
+  --shadow-surface-2: var(--shadow-2);
+  --shadow-surface-3: var(--shadow-3);
+  --shadow-surface-4: var(--shadow-4);
+  --shadow-surface-5: var(--shadow-5);
+  --shadow-surface-6: var(--shadow-6);
+  --shadow-surface-7: var(--shadow-7);
+  --shadow-surface-8: var(--shadow-8);
+}
+
+:root {
+  --pcc-background: #151619;
+  --pcc-foreground: rgb(245 247 250 / 0.94);
+  --pcc-muted-foreground: rgb(236 238 241 / 0.58);
+  --pcc-border: rgb(255 255 255 / 0.13);
+  --pcc-accent: rgb(255 255 255 / 0.08);
+  --pcc-hover: rgb(255 255 255 / 0.075);
+  --pcc-active: rgb(122 190 255 / 0.16);
+  --pcc-destructive: rgb(255 116 116 / 0.72);
+  --surface-1: #17181b;
+  --surface-2: #1e1f23;
+  --surface-3: #25262a;
+  --surface-4: #2c2d32;
+  --surface-5: #33343a;
+  --surface-6: #3a3b42;
+  --surface-7: #41424a;
+  --surface-8: #484a52;
+  --dm-hi-base: rgb(255 255 255 / 0.01);
+  --dm-hi-mid: rgb(255 255 255 / 0.02);
+  --dm-hi-high: rgb(255 255 255 / 0.04);
+  --dm-hi-peak: rgb(255 255 255 / 0.06);
+  --dm-ring-base: rgb(255 255 255 / 0.02);
+  --dm-ring-mid: rgb(255 255 255 / 0.04);
+  --dm-ring-high: rgb(255 255 255 / 0.06);
+  --dm-drop: rgb(0 0 0 / 0.18);
+  --shadow-1: inset 0 0 0 1px var(--dm-ring-base);
+  --shadow-2:
+    inset 0 1px 0 0 var(--dm-hi-base), inset 0 0 0 1px var(--dm-ring-base),
+    0 1px 1px -0.5px var(--dm-drop);
+  --shadow-3:
+    inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-base),
+    0 0 0 1px rgb(0 0 0 / 0.12), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop);
+  --shadow-4:
+    inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-mid),
+    0 0 0 1px rgb(0 0 0 / 0.14), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop);
+  --shadow-5:
+    inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-mid),
+    0 0 0 1px rgb(0 0 0 / 0.16), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop);
+  --shadow-6:
+    inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgb(0 0 0 / 0.18), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop);
+  --shadow-7:
+    inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgb(0 0 0 / 0.2), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop),
+    0 48px 48px -24px var(--dm-drop);
+  --shadow-8:
+    inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgb(0 0 0 / 0.22), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop),
+    0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px var(--dm-drop);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgb(255 255 255 / 0.035),
+      transparent 34%
+    ),
+    linear-gradient(180deg, #202124 0%, #151619 48%, #0e0f12 100%);
+}
+
+#root {
+  position: fixed;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.selection-action-bar {
+  position: fixed;
+  top: max(64px, calc(env(safe-area-inset-top) + 64px));
+  left: max(18px, env(safe-area-inset-left));
+  z-index: 12;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.selection-action-button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 999px;
+  color: rgb(245 247 250 / 0.9);
+  background: rgb(39 40 43 / 0.82);
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  font:
+    600 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.selection-action-button:hover {
+  color: #fff;
+  background: rgb(52 54 59 / 0.9);
+}
+
+.selection-action-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 0.32),
+    0 0 0 2px rgb(122 190 255 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.delete-selection-button {
+  border-color: rgb(255 116 116 / 0.23);
+  color: rgb(255 224 224 / 0.94);
+}
+
+.canvas-size-control {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  z-index: 13;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.canvas-size-button {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.13);
+  border-radius: 999px;
+  color: rgb(245 247 250 / 0.9);
+  background: rgb(39 40 43 / 0.82);
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  font:
+    650 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.canvas-size-button:hover {
+  color: #fff;
+  background: rgb(52 54 59 / 0.9);
+}
+
+.canvas-size-popover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(37 38 42 / 0.94);
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.canvas-size-popover label {
+  display: grid;
+  grid-template-columns: auto 54px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 11px;
+  color: rgb(236 238 241 / 0.68);
+  background: rgb(255 255 255 / 0.055);
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.canvas-size-popover input {
+  width: 54px;
+  height: 30px;
+  border: 0;
+  color: rgb(245 247 250 / 0.92);
+  background: transparent;
+  cursor: ns-resize;
+  font: inherit;
+  text-align: right;
+  appearance: textfield;
+  outline: none;
+  user-select: none;
+}
+
+.canvas-size-popover input::-webkit-inner-spin-button,
+.canvas-size-popover input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.canvas-size-popover button {
+  height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: rgb(122 190 255 / 0.18);
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.canvas-size-popover button:hover {
+  background: rgb(122 190 255 / 0.26);
+}
+
+.canvas-size-button:focus-visible,
+.canvas-size-popover button:focus-visible,
+.canvas-size-popover input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(122 190 255 / 0.44);
+}
+
+.editor-mode-tabs {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(116px, calc(env(safe-area-inset-left) + 116px));
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 38px;
+  color: rgb(236 238 241 / 0.42);
+  font:
+    650 13px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+.editor-mode-tabs button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.editor-mode-tabs button:hover {
+  color: rgb(236 238 241 / 0.74);
+}
+
+.editor-mode-tabs button.active {
+  color: rgb(245 247 250 / 0.94);
+}
+
+.editor-mode-tabs button:focus-visible {
+  outline: none;
+  text-shadow: 0 0 0 rgb(122 190 255);
+  box-shadow: 0 2px 0 rgb(122 190 255 / 0.68);
+}
+
+.brush-size-control {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(24px, env(safe-area-inset-left));
+  z-index: 11;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 22px;
+  background: rgb(39 40 43 / 0.84);
+  box-shadow:
+    0 16px 42px rgb(0 0 0 / 0.34),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(18px) saturate(1.2);
+  transition:
+    width 160ms ease,
+    height 160ms ease,
+    border-radius 160ms ease,
+    background 160ms ease;
+}
+
+.brush-size-control:hover,
+.brush-size-control:focus-within {
+  width: 64px;
+  height: 176px;
+  border-radius: 24px;
+  background: rgb(39 40 43 / 0.92);
+}
+
+.brush-size-control label {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  grid-template-rows: 18px minmax(0, 1fr) 20px;
+  align-items: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  color: rgb(236 238 241 / 0.72);
+  background: rgb(255 255 255 / 0.055);
+  font:
+    650 12px/1 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  transition:
+    width 160ms ease,
+    height 160ms ease,
+    border-radius 160ms ease;
+}
+
+.brush-size-control:hover label,
+.brush-size-control:focus-within label {
+  width: 52px;
+  height: 164px;
+  border-radius: 18px;
+}
+
+.brush-size-control span,
+.brush-size-control input {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.brush-size-control:hover span,
+.brush-size-control:hover input,
+.brush-size-control:focus-within span,
+.brush-size-control:focus-within input {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.brush-size-control input {
+  width: 28px;
+  height: 104px;
+  accent-color: rgb(122 190 255);
+  direction: rtl;
+  writing-mode: vertical-lr;
+}
+
+.brush-size-control strong {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: rgb(245 247 250 / 0.92);
+  font: inherit;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.brush-size-control:hover strong,
+.brush-size-control:focus-within strong {
+  position: static;
+  transform: none;
+}
+
+.brush-size-control input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(122 190 255 / 0.44);
+}
+
+@theme inline {
+  @keyframes spinner-move {
+    to {
+      stroke-dashoffset: -100;
+    }
+  }
+  @keyframes spinner-dash {
+    0%,
+    100% {
+      stroke-dasharray: 15 85;
+    }
+    50% {
+      stroke-dasharray: 40 60;
+    }
+  }
+}

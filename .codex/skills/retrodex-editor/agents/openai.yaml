@@ -1,0 +1,6 @@
+interface:
+  display_name: "Retrodex Editor"
+  short_description: "API-first pixel art editing, masking, animation, and export workflow for Codex."
+  default_prompt: "Use $retrodex-editor to inspect, edit, mask, animate, regenerate, and export pixel art through the Retrodex API/CLI."
+policy:
+  allow_implicit_invocation: true
