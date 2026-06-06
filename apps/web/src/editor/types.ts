@@ -98,12 +98,35 @@ export interface AnimationFrame {
 }
 
 export interface MaskLayer {
+  aliases?: string[];
   anchor: Point;
   color: string;
   id: string;
   mask: boolean[];
   name: string;
   parentId: null | string;
+  partKind?: string;
+  promptHint?: string;
+  regenerationPolicy?: {
+    allowImagegenReference: boolean;
+    allowRegenerate: boolean;
+    locked: boolean;
+    preservePalette: boolean;
+  };
+  semanticLabel?: string;
+  semanticRole?:
+    | "background"
+    | "body"
+    | "clothes"
+    | "eyes"
+    | "face"
+    | "hair"
+    | "head"
+    | "mouth"
+    | "prop"
+    | "shadow"
+    | "unknown"
+    | "weapon";
   visible: boolean;
 }
 

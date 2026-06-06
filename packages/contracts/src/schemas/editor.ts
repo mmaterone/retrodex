@@ -52,12 +52,14 @@ export const maskRegenerationPolicySchema = z.object({
 });
 
 export const editorMaskLayerSchema = z.object({
+  aliases: z.array(z.string().min(1)).default([]),
   anchor: editorPointSchema,
   color: rgbColorSchema,
   id: z.string().min(1),
   mask: z.array(z.boolean()),
   name: z.string().min(1),
   parentId: z.string().min(1).nullable(),
+  partKind: z.string().min(1).default("unknown"),
   promptHint: z.string().default(""),
   regenerationPolicy: maskRegenerationPolicySchema.default({}),
   semanticLabel: z.string().default(""),
@@ -370,6 +372,7 @@ export const animationMaskMotionTrackSchema = z.object({
     })
   ),
   maskLayerId: z.string().min(1),
+  partKind: z.string().min(1).default("unknown"),
   semanticLabel: z.string(),
   semanticRole: semanticMaskRoleSchema,
   stability: z.number().min(0).max(1),
@@ -511,6 +514,8 @@ export const partReferencePackageSchema = z.object({
   referenceImagePath: z.string().min(1),
   referenceImageUrl: z.string().min(1),
   runId: z.string().min(1),
+  aliases: z.array(z.string().min(1)).default([]),
+  partKind: z.string().min(1).default("unknown"),
   semanticLabel: z.string(),
   semanticRole: semanticMaskRoleSchema,
 });
@@ -866,6 +871,10 @@ export const editIntentTargetSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("semantic-role"),
     role: semanticMaskRoleSchema,
+  }),
+  z.object({
+    kind: z.literal("semantic-part"),
+    part: z.string().min(1),
   }),
   z.object({
     frameId: z.string().min(1).optional(),

@@ -165,12 +165,18 @@ export const documentMasksToEditorMasks = (
   document: EditorDocument
 ): MaskLayer[] =>
   document.masks.map((layer) => ({
+    aliases: layer.aliases,
     anchor: layer.anchor,
     color: layer.color,
     id: layer.id,
     mask: layer.mask,
     name: layer.name,
     parentId: layer.parentId,
+    partKind: layer.partKind,
+    promptHint: layer.promptHint,
+    regenerationPolicy: layer.regenerationPolicy,
+    semanticLabel: layer.semanticLabel,
+    semanticRole: layer.semanticRole,
     visible: layer.visible,
   }));
 
@@ -178,21 +184,23 @@ export const editorMasksToDocumentMasks = (
   layers: MaskLayer[]
 ): EditorMaskLayer[] =>
   layers.map((layer) => ({
+    aliases: layer.aliases ?? [],
     anchor: layer.anchor,
     color: layer.color,
     id: layer.id,
     mask: layer.mask,
     name: layer.name,
     parentId: layer.parentId,
-    promptHint: "",
-    regenerationPolicy: {
+    partKind: layer.partKind ?? layer.semanticLabel ?? layer.name,
+    promptHint: layer.promptHint ?? "",
+    regenerationPolicy: layer.regenerationPolicy ?? {
       allowImagegenReference: true,
       allowRegenerate: true,
       locked: false,
       preservePalette: true,
     },
-    semanticLabel: "",
-    semanticRole: "unknown",
+    semanticLabel: layer.semanticLabel ?? layer.name,
+    semanticRole: layer.semanticRole ?? "unknown",
     visible: layer.visible,
   }));
 

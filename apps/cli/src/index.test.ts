@@ -332,3 +332,44 @@ test("CLI previews editor exports without creating a snapshot", async () => {
     server.close();
   }
 });
+
+test("CLI resolves arbitrary edit targets as semantic parts", async () => {
+  let receivedBody = "";
+  const server = createServer((request, response) => {
+    assert.equal(request.method, "POST");
+    assert.equal(request.url, "/runs/run_1/editor/intents/apply");
+    request.on("data", (chunk: Buffer) => {
+      receivedBody += chunk.toString("utf-8");
+    });
+    request.on("end", () => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          document: { saveState: { revision: 4 } },
+          preview: { changedPixels: 4 },
+        })
+      );
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const cli = runCli(
+      ["edit", "recolor", "run_1", "--target", "hood", "--color", "#445566"],
+      `http://127.0.0.1:${address.port}`
+    );
+    await cli.getOutput();
+    assert.deepEqual(JSON.parse(receivedBody), {
+      intent: {
+        color: "#445566",
+        intent: "recolor-target",
+        preserveOutline: true,
+        target: { kind: "semantic-part", part: "hood" },
+      },
+    });
+  } finally {
+    server.close();
+  }
+});

@@ -422,6 +422,7 @@ const schemas: Record<string, unknown> = {
         type: "array",
       },
       maskLayerId: { minLength: 1, type: "string" },
+      partKind: { minLength: 1, type: "string" },
       semanticLabel: { type: "string" },
       semanticRole: {
         enum: [
@@ -445,6 +446,7 @@ const schemas: Record<string, unknown> = {
       "averageChangedPixels",
       "keyframes",
       "maskLayerId",
+      "partKind",
       "semanticLabel",
       "semanticRole",
       "stability",
@@ -744,6 +746,15 @@ const schemas: Record<string, unknown> = {
           },
         },
         required: ["kind", "role"],
+        type: "object",
+      },
+      {
+        additionalProperties: false,
+        properties: {
+          kind: { const: "semantic-part" },
+          part: { minLength: 1, type: "string" },
+        },
+        required: ["kind", "part"],
         type: "object",
       },
       {
@@ -1082,12 +1093,14 @@ const schemas: Record<string, unknown> = {
   EditorMaskLayer: {
     additionalProperties: false,
     properties: {
+      aliases: { items: { minLength: 1, type: "string" }, type: "array" },
       anchor: { $ref: "#/components/schemas/EditorPoint" },
       color: { pattern: "^#[0-9a-fA-F]{6}$", type: "string" },
       id: { minLength: 1, type: "string" },
       mask: { items: { type: "boolean" }, type: "array" },
       name: { minLength: 1, type: "string" },
       parentId: { type: ["string", "null"] },
+      partKind: { minLength: 1, type: "string" },
       promptHint: { type: "string" },
       regenerationPolicy: {
         additionalProperties: false,
@@ -1125,12 +1138,14 @@ const schemas: Record<string, unknown> = {
       visible: { type: "boolean" },
     },
     required: [
+      "aliases",
       "anchor",
       "color",
       "id",
       "mask",
       "name",
       "parentId",
+      "partKind",
       "promptHint",
       "regenerationPolicy",
       "semanticLabel",
@@ -2167,6 +2182,7 @@ const schemas: Record<string, unknown> = {
   PartReferencePackage: {
     additionalProperties: false,
     properties: {
+      aliases: { items: { minLength: 1, type: "string" }, type: "array" },
       bbox: { $ref: "#/components/schemas/Frame/$defs/bbox" },
       createdAt: { format: "date-time", type: "string" },
       exactMaskPixels: {
@@ -2178,6 +2194,7 @@ const schemas: Record<string, unknown> = {
       id: { minLength: 1, type: "string" },
       maskLayerId: { minLength: 1, type: "string" },
       pixelMapUrl: { minLength: 1, type: "string" },
+      partKind: { minLength: 1, type: "string" },
       promptHint: { type: "string" },
       referenceImagePath: { minLength: 1, type: "string" },
       referenceImageUrl: { minLength: 1, type: "string" },
@@ -2201,6 +2218,7 @@ const schemas: Record<string, unknown> = {
       },
     },
     required: [
+      "aliases",
       "bbox",
       "createdAt",
       "exactMaskPixels",
@@ -2209,6 +2227,7 @@ const schemas: Record<string, unknown> = {
       "id",
       "maskLayerId",
       "pixelMapUrl",
+      "partKind",
       "promptHint",
       "referenceImagePath",
       "referenceImageUrl",

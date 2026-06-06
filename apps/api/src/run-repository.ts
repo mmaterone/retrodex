@@ -317,6 +317,17 @@ const safeResolveInside = (root: string, ...parts: string[]): string => {
   return target;
 };
 
+const normalizeMaskLookupText = (value: string): string =>
+  value
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+const compactMaskLookupText = (value: string): string =>
+  normalizeMaskLookupText(value).replace(/\s+/g, "");
+
 export class RunRepository {
   readonly runsDir: string;
 
@@ -1117,6 +1128,8 @@ export class RunRepository {
       referenceImagePath,
       referenceImageUrl: `/runs/${run.id}/editor/references/${referenceId}/image`,
       runId: run.id,
+      aliases: layer.aliases,
+      partKind: layer.partKind,
       semanticLabel: layer.semanticLabel || layer.name,
       semanticRole: layer.semanticRole,
     });
@@ -3607,18 +3620,27 @@ export class RunRepository {
         (item) => item.id === intent.maskLayerId
       );
       return layer
-        ? `${layer.name} (${layer.semanticRole})`
+        ? `${layer.name} (${layer.partKind}, ${layer.semanticRole})`
         : `Mask ${intent.maskLayerId}`;
     }
     if (intent.target.kind === "mask-layer") {
       const { maskLayerId } = intent.target;
       const layer = document.masks.find((item) => item.id === maskLayerId);
       return layer
-        ? `${layer.name} (${layer.semanticRole})`
+        ? `${layer.name} (${layer.partKind}, ${layer.semanticRole})`
         : `Mask ${maskLayerId}`;
     }
     if (intent.target.kind === "semantic-role") {
       return `Semantic role ${intent.target.role}`;
+    }
+    if (intent.target.kind === "semantic-part") {
+      const layer = this.findMaskLayerBySemanticPart(
+        document,
+        intent.target.part
+      );
+      return layer
+        ? `${layer.name} (${layer.partKind}, ${layer.semanticRole})`
+        : `Semantic part ${intent.target.part}`;
     }
     return `Visual feature ${intent.target.visualKind}`;
   }
@@ -3679,6 +3701,13 @@ export class RunRepository {
         `No mask or visual feature found for role: ${target.role}`
       );
     }
+    if (target.kind === "semantic-part") {
+      const layer = this.findMaskLayerBySemanticPart(document, target.part);
+      if (!layer) {
+        throw new Error(`No mask found for semantic part: ${target.part}`);
+      }
+      return layer.mask;
+    }
     const inspection = this.inspectFrameDocument(document, frame);
     const feature = inspection.features.find(
       (item) => item.kind === target.visualKind
@@ -3687,6 +3716,50 @@ export class RunRepository {
       throw new Error(`No visual feature pixels found: ${target.visualKind}`);
     }
     return this.maskFromPoints(frame.grid.size, feature.pixels);
+  }
+
+  private findMaskLayerBySemanticPart(
+    document: EditorDocument,
+    part: string
+  ): EditorMaskLayer | null {
+    const normalizedPart = normalizeMaskLookupText(part);
+    const compactPart = compactMaskLookupText(part);
+    const scored = document.masks
+      .filter((layer) => layer.mask.some(Boolean))
+      .map((layer) => {
+        const values = [
+          layer.id,
+          layer.name,
+          layer.semanticLabel,
+          layer.partKind,
+          layer.promptHint,
+          ...layer.aliases,
+        ].filter((value): value is string => Boolean(value));
+        let score = 0;
+        for (const value of values) {
+          const normalizedValue = normalizeMaskLookupText(value);
+          const compactValue = compactMaskLookupText(value);
+          if (normalizedValue === normalizedPart) {
+            score = Math.max(score, 100);
+          } else if (compactValue === compactPart) {
+            score = Math.max(score, 95);
+          } else if (
+            normalizedValue.includes(normalizedPart) ||
+            normalizedPart.includes(normalizedValue)
+          ) {
+            score = Math.max(score, 70);
+          } else if (
+            compactValue.includes(compactPart) ||
+            compactPart.includes(compactValue)
+          ) {
+            score = Math.max(score, 65);
+          }
+        }
+        return { layer, score };
+      })
+      .filter((item) => item.score > 0)
+      .toSorted((left, right) => right.score - left.score);
+    return scored[0]?.layer ?? null;
   }
 
   private maskFromPoints(
@@ -3807,6 +3880,7 @@ export class RunRepository {
     if (!draft?.rigParts.length) {
       return [
         {
+          aliases: [],
           anchor: { x: run.canvas.width / 2, y: run.canvas.height / 2 },
           color: defaultMaskColor,
           id: "mask_1",
@@ -3816,6 +3890,7 @@ export class RunRepository {
           ),
           name: "Mask 1",
           parentId: null,
+          partKind: "unknown",
           promptHint: "",
           regenerationPolicy: {
             allowImagegenReference: true,
@@ -3830,6 +3905,7 @@ export class RunRepository {
       ];
     }
     return draft.rigParts.map((part, index) => ({
+      aliases: [],
       anchor: { x: part.anchor.x, y: part.anchor.y },
       color: part.color,
       id: part.id,
@@ -3839,6 +3915,7 @@ export class RunRepository {
       ),
       name: part.name || `Mask ${index + 1}`,
       parentId: part.parentId,
+      partKind: part.name || "unknown",
       promptHint: "",
       regenerationPolicy: {
         allowImagegenReference: true,
@@ -5112,6 +5189,7 @@ export function RetrodexPixelPreview() {
       averageChangedPixels,
       keyframes,
       maskLayerId: layer.id,
+      partKind: layer.partKind,
       semanticLabel: layer.semanticLabel || layer.name,
       semanticRole: layer.semanticRole,
       stability: Math.max(
@@ -5202,7 +5280,7 @@ export function RetrodexPixelPreview() {
           confidence: layer.semanticRole === "unknown" ? 0.6 : 0.95,
           description:
             layer.promptHint ||
-            `${layer.semanticLabel || layer.name} mask for targeted animation or regeneration.`,
+            `${layer.semanticLabel || layer.partKind || layer.name} mask for targeted animation or regeneration.`,
           id: `mask_${layer.id}`,
           kind: "mask-part",
           maskLayerId: layer.id,

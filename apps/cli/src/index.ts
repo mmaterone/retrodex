@@ -8,6 +8,20 @@ interface CliOptions {
 }
 
 const defaultApi = "http://127.0.0.1:5175";
+const semanticRoles = new Set([
+  "background",
+  "body",
+  "clothes",
+  "eyes",
+  "face",
+  "hair",
+  "head",
+  "mouth",
+  "prop",
+  "shadow",
+  "unknown",
+  "weapon",
+]);
 
 const parseArgs = async (argv: string[]): Promise<CliOptions> => {
   const args = [...argv];
@@ -70,6 +84,11 @@ const objectJson = (json: unknown): Record<string, unknown> =>
   typeof json === "object" && json !== null
     ? (json as Record<string, unknown>)
     : {};
+
+const targetFromOption = (target: string | undefined): Record<string, unknown> =>
+  semanticRoles.has(target ?? "")
+    ? { kind: "semantic-role", role: target }
+    : { kind: "semantic-part", part: target ?? "unknown" };
 
 const request = async <T>(
   api: string,
@@ -463,10 +482,7 @@ const run = async (): Promise<void> => {
           intent: "recolor-target",
           preserveOutline:
             option(args, "--preserve-outline", "true") !== "false",
-          target: {
-            kind: "semantic-role",
-            role: target ?? "unknown",
-          },
+          target: targetFromOption(target),
         };
     print(
       await request(api, `/runs/${id}/editor/intents/apply`, {
@@ -608,6 +624,15 @@ const run = async (): Promise<void> => {
                   args,
                   "--prompt",
                   String(layer.promptHint ?? "")
+                ),
+                aliases:
+                  listOption(args, "--aliases").length > 0
+                    ? listOption(args, "--aliases")
+                    : ((layer.aliases as string[] | undefined) ?? []),
+                partKind: option(
+                  args,
+                  "--part-kind",
+                  String(layer.partKind ?? layer.semanticLabel ?? layer.name)
                 ),
                 semanticLabel: option(
                   args,

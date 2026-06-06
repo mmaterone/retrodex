@@ -1067,12 +1067,14 @@ test("RunRepository applies agent-level canvas and mask tool operations", async 
     };
     document.masks = [
       {
+        aliases: [],
         anchor: { x: 16, y: 16 },
         color: "#4aa3ff",
         id: "mask_tool",
         mask: Array.from({ length: 32 * 32 }, () => false),
         name: "Mask 1",
         parentId: null,
+        partKind: "unknown",
         promptHint: "",
         regenerationPolicy: {
           allowImagegenReference: true,
@@ -1283,12 +1285,16 @@ test("RunRepository previews and applies semantic edit intents", async () => {
     };
     document.masks[0] = {
       ...document.masks[0],
+      aliases: ["hoodie", "капюшон"],
       mask: Array.from({ length: 32 * 32 }, (_, index) => {
         const x = index % 32;
         const y = Math.floor(index / 32);
         return x >= 8 && x < 12 && y >= 8 && y < 12;
       }),
-      semanticRole: "hair",
+      name: "Mask 1",
+      partKind: "hood",
+      semanticLabel: "Hood",
+      semanticRole: "clothes",
     };
     await repository.writeEditorDocument(document);
 
@@ -1297,7 +1303,7 @@ test("RunRepository previews and applies semantic edit intents", async () => {
         color: "#552211",
         intent: "recolor-target",
         preserveOutline: false,
-        target: { kind: "semantic-role", role: "hair" },
+        target: { kind: "semantic-role", role: "clothes" },
       },
     });
     editIntentPreviewSchema.parse(preview);
@@ -1308,10 +1314,20 @@ test("RunRepository previews and applies semantic edit intents", async () => {
         color: "#552211",
         intent: "recolor-target",
         preserveOutline: false,
-        target: { kind: "semantic-role", role: "hair" },
+        target: { kind: "semantic-role", role: "clothes" },
       },
     });
     assert.equal(applied.document.frames[0]?.grid.cells[8 * 32 + 8], "#552211");
+    const partPreview = await repository.previewEditIntent(run.id, {
+      intent: {
+        color: "#334455",
+        intent: "recolor-target",
+        preserveOutline: false,
+        target: { kind: "semantic-part", part: "капюшон" },
+      },
+    });
+    assert.equal(partPreview.changedPixels, 16);
+    assert.match(partPreview.targetSummary, /hood/iu);
     const checkpoints = await repository.listEditorCheckpoints(run.id);
     assert.equal(checkpoints.length, 1);
   } finally {
