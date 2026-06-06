@@ -514,6 +514,7 @@ export const App = () => {
     brushSize,
     canvasSize,
     currentColor,
+    currentOpacity,
     editorMode,
     exportFormat,
     exportFrameId,
@@ -559,6 +560,7 @@ export const App = () => {
     setBrushSize,
     setCanvasSize,
     setCurrentColor,
+    setCurrentOpacity,
     setEditorMode,
     setExportFormat,
     setExportFrameId,
@@ -2022,11 +2024,18 @@ export const App = () => {
       return;
     }
     if (tool === "eraser") {
-      context.clearRect(cell.x * scale, cell.y * scale, scale, scale);
+      context.save();
+      context.globalAlpha = currentOpacity;
+      context.globalCompositeOperation = "destination-out";
+      context.fillRect(cell.x * scale, cell.y * scale, scale, scale);
+      context.restore();
       return;
     }
+    context.save();
+    context.globalAlpha = currentOpacity;
     context.fillStyle = currentColor;
     context.fillRect(cell.x * scale, cell.y * scale, scale, scale);
+    context.restore();
   };
 
   const paint = (cell: Cell, tool: Tool) => {
@@ -3020,10 +3029,12 @@ export const App = () => {
       <ColorPanel
         color={currentColor}
         isOpen={isColorPanelOpen}
+        opacity={currentOpacity}
         savedColors={savedColors}
         onAddSavedColor={addCurrentColorToPalette}
         onChange={setCurrentColor}
         onClose={() => setIsColorPanelOpen(false)}
+        onOpacityChange={setCurrentOpacity}
       />
       <FloatingPanels
         activeTool={activeTool}

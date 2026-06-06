@@ -175,10 +175,12 @@ interface BrushSizePanelProps {
 interface ColorPanelProps {
   color: string;
   isOpen: boolean;
+  opacity: number;
   savedColors: string[];
   onAddSavedColor: () => void;
   onChange: (color: string) => void;
   onClose: () => void;
+  onOpacityChange: (opacity: number) => void;
 }
 
 interface MaskLayersPanelProps {
@@ -611,6 +613,8 @@ export const ColorPanel = ({
   onAddSavedColor,
   onChange,
   onClose,
+  onOpacityChange,
+  opacity,
   savedColors,
 }: ColorPanelProps) => {
   const [draftColor, setDraftColor] = useState(color.toUpperCase());
@@ -652,6 +656,11 @@ export const ColorPanel = ({
     const hue = clamp(((event.clientX - rect.left) / rect.width) * 360, 360);
     setSelectedHue(hue);
     onChange(hsvToHexColor({ h: hue, s: colorHsv.s, v: colorHsv.v }));
+  };
+
+  const pickOpacity = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    onOpacityChange(clamp((event.clientX - rect.left) / rect.width, 1));
   };
 
   return (
@@ -718,6 +727,27 @@ export const ColorPanel = ({
           onChange={(event) => updateDraftColor(event.target.value)}
         />
       </label>
+      <div className="opacity-control">
+        <span>Opacity</span>
+        <button
+          aria-label="Brush and eraser opacity"
+          className="opacity-slider"
+          type="button"
+          style={{ "--opacity-x": `${opacity * 100}%` } as CSSProperties}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            pickOpacity(event);
+          }}
+          onPointerMove={(event) => {
+            if (event.buttons === 1) {
+              pickOpacity(event);
+            }
+          }}
+        >
+          <span aria-hidden="true" />
+        </button>
+        <strong>{Math.round(opacity * 100)}%</strong>
+      </div>
       <div className="quick-colors" aria-label="Saved colors">
         <button
           aria-label="Add current color to palette"

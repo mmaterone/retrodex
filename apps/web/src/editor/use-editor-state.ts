@@ -33,6 +33,7 @@ export interface EditorState {
   brushSize: number;
   canvasSize: Size;
   currentColor: string;
+  currentOpacity: number;
   editorMode: EditorMode;
   exportFormat: ExportFormat;
   exportFrameId: string;
@@ -93,6 +94,7 @@ const editorStateKeys = [
   "brushSize",
   "canvasSize",
   "currentColor",
+  "currentOpacity",
   "editorMode",
   "exportFormat",
   "exportFrameId",
@@ -166,6 +168,7 @@ export const createInitialEditorState = ({
     brushSize: 1,
     canvasSize: size,
     currentColor: defaultColor,
+    currentOpacity: 1,
     editorMode: "edit",
     exportFormat: "png",
     exportFrameId: initialFrameId,
