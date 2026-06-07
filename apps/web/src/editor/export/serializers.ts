@@ -1,5 +1,63 @@
 import { fpsToFrameDurationMs, playbackIntervalMs } from "../constants";
-import type { AnimationFrame, ExportFormat, ExportScope } from "../types";
+import { cellIndex, createEmptyGrid } from "../grid";
+import type { AnimationFrame, ExportFormat, ExportScope, Size } from "../types";
+
+export const JSON_EXPORT_MAX_SIZE = 512;
+
+export const computeJsonExportScale = (
+  size: Size,
+  maxSize = JSON_EXPORT_MAX_SIZE
+): number => {
+  if (size.width < 1 || size.height < 1) {
+    return 1;
+  }
+  return Math.max(
+    1,
+    Math.floor(Math.min(maxSize / size.width, maxSize / size.height))
+  );
+};
+
+export const upscaleGridNearest = (
+  grid: AnimationFrame["grid"],
+  fromSize: Size,
+  scaleFactor: number
+): { grid: AnimationFrame["grid"]; size: Size } => {
+  if (scaleFactor <= 1) {
+    return { grid, size: fromSize };
+  }
+  const toSize = {
+    height: fromSize.height * scaleFactor,
+    width: fromSize.width * scaleFactor,
+  };
+  const nextGrid = createEmptyGrid(toSize);
+  for (let y = 0; y < fromSize.height; y += 1) {
+    for (let x = 0; x < fromSize.width; x += 1) {
+      const color = grid[cellIndex(fromSize, x, y)];
+      if (!color) {
+        continue;
+      }
+      for (let offsetY = 0; offsetY < scaleFactor; offsetY += 1) {
+        for (let offsetX = 0; offsetX < scaleFactor; offsetX += 1) {
+          nextGrid[
+            cellIndex(toSize, x * scaleFactor + offsetX, y * scaleFactor + offsetY)
+          ] = color;
+        }
+      }
+    }
+  }
+  return { grid: nextGrid, size: toSize };
+};
+
+const prepareJsonExportFrames = (frames: AnimationFrame[]) =>
+  frames.map((frame) => {
+    const scaleFactor = computeJsonExportScale(frame.size);
+    const upscaled = upscaleGridNearest(frame.grid, frame.size, scaleFactor);
+    return {
+      ...frame,
+      grid: upscaled.grid,
+      size: upscaled.size,
+    };
+  });
 
 interface LottieRectRun {
   color: number[];
@@ -16,14 +74,27 @@ const rgbaColorPattern =
 const componentToUnit = (value: number) =>
   Math.max(0, Math.min(255, value)) / 255;
 
+const parseColorAlpha = (value: string | undefined) => {
+  if (value === undefined) {
+    return 1;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+  if (parsed > 1) {
+    return Math.max(0, Math.min(1, parsed / 255));
+  }
+  return Math.max(0, Math.min(1, parsed));
+};
+
 const colorToLottieFill = (color: string) => {
   const match = rgbaColorPattern.exec(color.trim());
   if (match) {
     const red = componentToUnit(Number(match[1]));
     const green = componentToUnit(Number(match[2]));
     const blue = componentToUnit(Number(match[3]));
-    const alpha =
-      match[4] === undefined ? 1 : Math.max(0, Math.min(1, Number(match[4])));
+    const alpha = parseColorAlpha(match[4]);
     return { color: [red, green, blue], opacity: alpha * 100 };
   }
   const normalized = color.trim().replace("#", "");
@@ -93,10 +164,66 @@ const createRectRuns = (
 const lottieColorKey = (run: LottieRectRun) =>
   `${run.color.join(",")}:${run.opacity}`;
 
+export const LOTTIE_EXPORT_FPS = 60;
+export const TGS_EXPORT_MAX_BYTES = 64_000;
+export const TGS_LOTTIE_VERSION = "5.5.2";
+
+export const computeLottieFrameHold = (sourceFps: number): number => {
+  const source = Math.max(1, Math.round(sourceFps));
+  if (LOTTIE_EXPORT_FPS % source === 0) {
+    return LOTTIE_EXPORT_FPS / source;
+  }
+  return Math.max(1, Math.round(LOTTIE_EXPORT_FPS / source));
+};
+
+const lottieStaticScalar = (value: number) => ({ a: 0, k: value });
+
+const lottieStaticVector2 = (x: number, y: number) => ({
+  a: 0,
+  k: [x, y],
+});
+
+const lottieStaticColor = (color: number[]) => ({ a: 0, k: color });
+
+const createLottieRectShape = (run: LottieRectRun) => ({
+  d: 1,
+  p: lottieStaticVector2(run.x + run.width / 2, run.y + run.height / 2),
+  r: lottieStaticScalar(0),
+  s: lottieStaticVector2(run.width, run.height),
+  ty: "rc",
+});
+
+const createLottieFillShape = (color: number[], opacity: number) => ({
+  c: lottieStaticColor(color),
+  o: lottieStaticScalar(opacity),
+  r: 1,
+  ty: "fl",
+});
+
+const createLottieTransformShape = () => ({
+  a: lottieStaticVector2(0, 0),
+  o: lottieStaticScalar(100),
+  p: lottieStaticVector2(0, 0),
+  r: lottieStaticScalar(0),
+  s: lottieStaticVector2(100, 100),
+  ty: "tr",
+});
+
+const createLottieLayerTransform = () => ({
+  a: lottieStaticVector2(0, 0),
+  o: lottieStaticScalar(100),
+  p: lottieStaticVector2(0, 0),
+  r: lottieStaticScalar(0),
+  s: lottieStaticVector2(100, 100),
+});
+
 const createGroupedRectRunShapes = (
   runs: LottieRectRun[],
   frameIndex: number
 ) => {
+  if (runs.length === 0) {
+    return [];
+  }
   const groups = new Map<string, LottieRectRun[]>();
   for (const run of runs) {
     const key = lottieColorKey(run);
@@ -104,26 +231,40 @@ const createGroupedRectRunShapes = (
   }
   return [...groups.values()].map((colorRuns, colorIndex) => {
     const [firstRun] = colorRuns;
+    const items = [
+      ...colorRuns.map((run) => createLottieRectShape(run)),
+      createLottieFillShape(firstRun?.color ?? [0, 0, 0], firstRun?.opacity ?? 100),
+      createLottieTransformShape(),
+    ];
     return {
-      it: [
-        ...colorRuns.map((run) => ({
-          p: { k: [run.x + run.width / 2, run.y + run.height / 2] },
-          r: { k: 0 },
-          s: { k: [run.width, run.height] },
-          ty: "rc",
-        })),
-        {
-          c: { k: firstRun?.color ?? [0, 0, 0] },
-          o: { k: firstRun?.opacity ?? 100 },
-          ty: "fl",
-        },
-        { p: { k: [0, 0] }, ty: "tr" },
-      ],
-      nm: `color-${frameIndex + 1}-${colorIndex + 1}`,
+      it: items,
+      np: items.length,
       ty: "gr",
     };
   });
 };
+
+const createLottieLayer = ({
+  frame,
+  frameIndex,
+  holdFrames,
+  scaleFactor,
+}: {
+  frame: AnimationFrame;
+  frameIndex: number;
+  holdFrames: number;
+  scaleFactor: number;
+}) => ({
+  ddd: 0,
+  ind: frameIndex + 1,
+  ip: frameIndex * holdFrames,
+  ks: createLottieLayerTransform(),
+  op: (frameIndex + 1) * holdFrames,
+  shapes: createGroupedRectRunShapes(createRectRuns(frame, scaleFactor), frameIndex),
+  sr: 1,
+  st: 0,
+  ty: 4,
+});
 
 export const frameToSvgRects = (frame: AnimationFrame, scaleFactor: number) =>
   frame.grid
@@ -177,26 +318,38 @@ export const createSavedAnimationJson = (
   format: ExportFormat,
   scope: ExportScope,
   fps = Math.round(1000 / playbackIntervalMs)
-) =>
-  JSON.stringify(
+) => {
+  const exportFrames =
+    format === "json" ? prepareJsonExportFrames(frames) : frames;
+  const [firstFrame] = exportFrames;
+  const exportScale =
+    format === "json" && firstFrame
+      ? computeJsonExportScale(frames[0]?.size ?? firstFrame.size)
+      : scaleFactor;
+
+  return JSON.stringify(
     {
-      canvas: frames[0]?.size ?? { height: 0, width: 0 },
+      canvas: firstFrame?.size ?? { height: 0, width: 0 },
       createdAt: new Date().toISOString(),
       format,
       fps,
-      frames: frames.map((frame, index) => ({
+      frames: exportFrames.map((frame, index) => ({
         grid: frame.grid,
         id: frame.id,
         index,
         size: frame.size,
       })),
-      scale: scaleFactor,
+      scale: exportScale,
       schemaVersion: "ui-export.v1",
       scope,
+      ...(format === "json"
+        ? { targetMaxSize: JSON_EXPORT_MAX_SIZE }
+        : {}),
     },
     null,
     2
   );
+};
 
 export const getExportFramesForScope = (
   frames: AnimationFrame[],
@@ -257,47 +410,196 @@ export function PixelAnimation() {
 `;
 };
 
-export const createLottieExport = (
+// Bodymovin-TG uses 100 for opaque fills and a 0-1 fraction for partial opacity.
+const tgsFillOpacity = (opacity: number) => {
+  if (opacity >= 100) {
+    return 100;
+  }
+  const fraction = opacity > 1 ? opacity / 100 : opacity;
+  return Math.round(fraction * 10) / 10;
+};
+
+const createTgsRectShape = (run: LottieRectRun, rectIndex: number) => ({
+  ty: "rc",
+  d: 1,
+  s: lottieStaticVector2(run.width, run.height),
+  p: lottieStaticVector2(run.x + run.width / 2, run.y + run.height / 2),
+  r: lottieStaticScalar(0),
+  nm: `Rectangle Path ${rectIndex}`,
+  hd: false,
+});
+
+const createTgsFillShape = (color: number[], opacity: number) => ({
+  ty: "fl",
+  c: lottieStaticColor([color[0] ?? 0, color[1] ?? 0, color[2] ?? 0, 1]),
+  o: lottieStaticScalar(tgsFillOpacity(opacity)),
+  r: 1,
+  bm: 0,
+  nm: "Fill 1",
+  hd: false,
+});
+
+const createTgsTransformShape = () => ({
+  ty: "tr",
+  p: lottieStaticVector2(0, 0),
+  a: lottieStaticVector2(0, 0),
+  s: lottieStaticVector2(100, 100),
+  r: lottieStaticScalar(0),
+  o: lottieStaticScalar(100),
+  sk: lottieStaticScalar(0),
+  sa: lottieStaticScalar(0),
+  nm: "Transform",
+});
+
+const createTgsGroupedRectRunShapes = (runs: LottieRectRun[]) => {
+  if (runs.length === 0) {
+    return [];
+  }
+  const groups = new Map<string, LottieRectRun[]>();
+  for (const run of runs) {
+    const key = lottieColorKey(run);
+    groups.set(key, [...(groups.get(key) ?? []), run]);
+  }
+  return [...groups.values()].map((colorRuns, colorIndex) => {
+    const [firstRun] = colorRuns;
+    let rectIndex = 1;
+    const items = [
+      ...colorRuns.map((run) => createTgsRectShape(run, rectIndex++)),
+      createTgsFillShape(firstRun?.color ?? [0, 0, 0], firstRun?.opacity ?? 100),
+      createTgsTransformShape(),
+    ];
+    return {
+      ty: "gr",
+      it: items,
+      nm: `Group ${colorIndex + 1}`,
+      bm: 0,
+      hd: false,
+    };
+  });
+};
+
+const createTgsLayer = ({
+  frame,
+  frameIndex,
+  frameCount,
+  holdFrames,
+  scaleFactor,
+}: {
+  frame: AnimationFrame;
+  frameIndex: number;
+  frameCount: number;
+  holdFrames: number;
+  scaleFactor: number;
+}) => ({
+  ddd: 0,
+  ind: frameIndex + 1,
+  ty: 4,
+  nm: `Shape Layer ${frameCount - frameIndex}`,
+  sr: 1,
+  ks: {},
+  ao: 0,
+  shapes: createTgsGroupedRectRunShapes(createRectRuns(frame, scaleFactor)),
+  ip: frameIndex * holdFrames,
+  op: (frameIndex + 1) * holdFrames,
+  st: 0,
+  bm: 0,
+});
+
+export const buildTgsLottieDocument = (
   frames: AnimationFrame[],
-  scaleFactor: number,
-  fps = Math.round(1000 / playbackIntervalMs)
+  sourceFps = Math.round(1000 / playbackIntervalMs)
 ) => {
   const [frame] = frames;
-  const frameRate = Math.max(1, Math.round(fps));
+  const roundedSourceFps = Math.max(1, Math.round(sourceFps));
+  const holdFrames = computeLottieFrameHold(roundedSourceFps);
+  const totalFrames = Math.max(1, frames.length * holdFrames);
+  const tgsScale = frame ? computeJsonExportScale(frame.size) : 1;
+
+  return {
+    tgs: 1,
+    v: TGS_LOTTIE_VERSION,
+    fr: LOTTIE_EXPORT_FPS,
+    ip: 0,
+    op: totalFrames,
+    w: (frame?.size.width ?? 1) * tgsScale,
+    h: (frame?.size.height ?? 1) * tgsScale,
+    nm: "Pixel Animation",
+    ddd: 0,
+    assets: [] as [],
+    layers: frames.map((item, frameIndex) =>
+      createTgsLayer({
+        frame: item,
+        frameCount: frames.length,
+        frameIndex,
+        holdFrames,
+        scaleFactor: tgsScale,
+      })
+    ),
+  };
+};
+
+const gzipUtf8Json = async (payload: unknown): Promise<Uint8Array> => {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  if (typeof CompressionStream !== "undefined") {
+    const compressed = await new Response(
+      new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"))
+    ).arrayBuffer();
+    return new Uint8Array(compressed);
+  }
+  throw new Error("TGS export requires browser gzip support.");
+};
+
+export const createTgsExportBlob = async (
+  frames: AnimationFrame[],
+  _scaleFactor: number,
+  sourceFps = Math.round(1000 / playbackIntervalMs)
+): Promise<Blob> => {
+  const document = buildTgsLottieDocument(frames, sourceFps);
+  const bytes = await gzipUtf8Json(document);
+  if (bytes.length > TGS_EXPORT_MAX_BYTES) {
+    throw new Error(
+      `TGS export exceeds ${TGS_EXPORT_MAX_BYTES} bytes (${bytes.length}). Reduce frames or colors.`
+    );
+  }
+  return new Blob([Uint8Array.from(bytes)], { type: "application/x-tgsticker" });
+};
+
+export const createLottieExport = (
+  frames: AnimationFrame[],
+  _scaleFactor: number,
+  sourceFps = Math.round(1000 / playbackIntervalMs)
+) => {
+  const [frame] = frames;
+  const roundedSourceFps = Math.max(1, Math.round(sourceFps));
+  const holdFrames = computeLottieFrameHold(roundedSourceFps);
+  const totalFrames = Math.max(1, frames.length * holdFrames);
+  const lottieScale = frame ? computeJsonExportScale(frame.size) : 1;
+  const width = (frame?.size.width ?? 1) * lottieScale;
+  const height = (frame?.size.height ?? 1) * lottieScale;
+
   return JSON.stringify({
     assets: [],
-    ddd: 0,
-    fr: frameRate,
-    h: (frame?.size.height ?? 1) * scaleFactor,
+    fr: LOTTIE_EXPORT_FPS,
+    h: height,
     ip: 0,
-    layers: frames.map((item, frameIndex) => ({
-      ddd: 0,
-      ind: frameIndex + 1,
-      ip: frameIndex,
-      ks: {
-        a: { k: [0, 0, 0] },
-        o: { k: 100 },
-        p: { k: [0, 0, 0] },
-        r: { k: 0 },
-        s: { k: [100, 100, 100] },
+    layers: frames.map((item, frameIndex) =>
+      createLottieLayer({
+        frame: item,
+        frameIndex,
+        holdFrames,
+        scaleFactor: lottieScale,
+      })
+    ),
+    markers: [
+      {
+        cm: `retrodex sourceFps=${roundedSourceFps} exportFps=${LOTTIE_EXPORT_FPS} frameHold=${holdFrames} pixelScale=${lottieScale}`,
+        dr: 0,
+        tm: 0,
       },
-      nm: `Frame ${frameIndex + 1}`,
-      op: frameIndex + 1,
-      shapes: createGroupedRectRunShapes(
-        createRectRuns(item, scaleFactor),
-        frameIndex
-      ),
-      sr: 1,
-      st: 0,
-      ty: 4,
-    })),
-    meta: {
-      generator: "retrodex-rect-runs",
-      note: "Pixel art is encoded as merged vector rectangle runs.",
-    },
+    ],
     nm: "Pixel Animation",
-    op: Math.max(frames.length, 1),
+    op: totalFrames,
     v: "5.12.0",
-    w: (frame?.size.width ?? 1) * scaleFactor,
+    w: width,
   });
 };

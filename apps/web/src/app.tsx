@@ -52,6 +52,7 @@ import {
   createReactExport,
   createSavedAnimationJson,
   createSvgExport,
+  createTgsExportBlob,
   getExportDialogFrames,
   getExportFramesForScope,
 } from "./editor/export/serializers";
@@ -375,6 +376,13 @@ const downloadLocalExport = async ({
     );
     return saveExportFiles(directoryPath, exportFiles);
   }
+  if (format === "tgs") {
+    await saveBlob(
+      await createTgsExportBlob(frames, scaleFactor, fps),
+      `${filenameBase}.tgs`
+    );
+    return saveExportFiles(directoryPath, exportFiles);
+  }
   if (format === "react") {
     await saveText(
       createReactExport(frames, scaleFactor, fps),
@@ -441,6 +449,7 @@ export const App = () => {
   const loadFrameRef = useRef<((frame: AnimationFrame) => void) | null>(null);
   const redoCanvasRef = useRef<(() => void) | null>(null);
   const saveProjectRef = useRef<(() => Promise<void>) | null>(null);
+  const suppressToolShortcutUntilRef = useRef(0);
   const togglePlaybackRef = useRef<(() => void) | null>(null);
   const undoStackRef = useRef<CanvasSnapshot[]>([]);
   const undoCanvasRef = useRef<(() => void) | null>(null);
@@ -1866,10 +1875,14 @@ export const App = () => {
       return false;
     };
     const handleShortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
       if (isSaveShortcut(event)) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
+        suppressToolShortcutUntilRef.current = Date.now() + 500;
         void (async () => {
           try {
             await saveProjectRef.current?.();
@@ -1903,9 +1916,14 @@ export const App = () => {
         return;
       }
       if (isCommand && handleCommandShortcut(event, code)) {
+        suppressToolShortcutUntilRef.current = Date.now() + 500;
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) {
+        suppressToolShortcutUntilRef.current = Date.now() + 500;
+        return;
+      }
+      if (Date.now() < suppressToolShortcutUntilRef.current) {
         return;
       }
       if (code === "Space") {
