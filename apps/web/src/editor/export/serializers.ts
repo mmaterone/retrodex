@@ -266,18 +266,46 @@ const createLottieLayer = ({
   ty: 4,
 });
 
-export const frameToSvgRects = (frame: AnimationFrame, scaleFactor: number) =>
-  frame.grid
-    .map((color, index) => {
-      if (!color) {
+const unitToByte = (value: number) =>
+  Math.round(Math.max(0, Math.min(1, value)) * 255);
+
+const byteToHex = (value: number) =>
+  unitToByte(value).toString(16).padStart(2, "0");
+
+const lottieFillToSvgAttributes = (run: LottieRectRun) => {
+  const fill = `#${byteToHex(run.color[0] ?? 0)}${byteToHex(
+    run.color[1] ?? 0
+  )}${byteToHex(run.color[2] ?? 0)}`;
+  const opacity = Math.max(0, Math.min(100, run.opacity)) / 100;
+  return opacity >= 1
+    ? `fill="${fill}"`
+    : `fill="${fill}" fill-opacity="${Number(opacity.toFixed(3))}"`;
+};
+
+const rectRunToSvgSubpath = (run: LottieRectRun) =>
+  `M${run.x} ${run.y}h${run.width}v${run.height}h${-run.width}z`;
+
+export const frameToSvgPaths = (frame: AnimationFrame, scaleFactor: number) => {
+  const groups = new Map<string, LottieRectRun[]>();
+  for (const run of createRectRuns(frame, scaleFactor)) {
+    const key = lottieColorKey(run);
+    groups.set(key, [...(groups.get(key) ?? []), run]);
+  }
+  return [...groups.values()]
+    .map((runs) => {
+      const [firstRun] = runs;
+      if (!firstRun) {
         return "";
       }
-      const x = (index % frame.size.width) * scaleFactor;
-      const y = Math.floor(index / frame.size.width) * scaleFactor;
-      return `<rect x="${x}" y="${y}" width="${scaleFactor}" height="${scaleFactor}" fill="${color}" />`;
+      return `<path ${lottieFillToSvgAttributes(firstRun)} d="${runs
+        .map(rectRunToSvgSubpath)
+        .join("")}" />`;
     })
     .filter(Boolean)
     .join("\n");
+};
+
+export const frameToSvgRects = frameToSvgPaths;
 
 export const createSvgExport = (
   frames: AnimationFrame[],
@@ -301,7 +329,7 @@ export const createSvgExport = (
           : `<set attributeName="display" to="inline" begin="${index * frameDurationMs}ms; animation.end+${index * frameDurationMs}ms" dur="${frameDurationMs}ms" />`;
       return `<g display="${visible}">
 ${animation}
-${frameToSvgRects(frame, scaleFactor)}
+${frameToSvgPaths(frame, scaleFactor)}
 </g>`;
     })
     .join("\n");

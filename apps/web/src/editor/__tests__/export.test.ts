@@ -11,7 +11,7 @@ import {
   createSavedAnimationJson,
   createSvgExport,
   createTgsExportBlob,
-  frameToSvgRects,
+  frameToSvgPaths,
   getExportDialogFrames,
   getExportFramesForScope,
   JSON_EXPORT_MAX_SIZE,
@@ -33,10 +33,16 @@ describe("export serializers", () => {
     "frame-b"
   );
 
-  it("serializes SVG rects and animation groups", () => {
-    expect(frameToSvgRects(frame, 2)).toContain(
-      '<rect x="0" y="0" width="2" height="2" fill="#111111" />'
+  it("serializes SVG path runs and animation groups", () => {
+    expect(frameToSvgPaths(frame, 2)).toContain(
+      '<path fill="#111111" d="M0 0h2v2h-2z" />'
     );
+    expect(
+      frameToSvgPaths(
+        createFrame({ height: 1, width: 1 }, ["rgba(0, 0, 0, 0.4)"], "alpha"),
+        2
+      )
+    ).toContain('fill="#000000" fill-opacity="0.4"');
     expect(createSvgExport([frame, frameB], 2)).toContain(
       'shape-rendering="crispEdges"'
     );
