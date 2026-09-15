@@ -75,7 +75,6 @@ import type {
   GradientKind,
   GradientPattern,
   MaskLayer,
-  PaletteEntry,
   Point,
   SelectionMode,
   ShapeMode,
@@ -109,13 +108,6 @@ interface GradientOptionsBarProps {
   onGradientStartColorChange: (color: string) => void;
 }
 
-interface ReferencePanelProps {
-  isMinimized: boolean;
-  onClose: () => void;
-  onMinimize: () => void;
-  onPickColor: (color: string) => void;
-}
-
 interface ShapeOptionsBarProps {
   shapeMode: ShapeMode;
   shapeRadius: number;
@@ -132,8 +124,6 @@ interface FloatingPanelsProps {
   gradientStartColor: string;
   canDeleteSelection: boolean;
   hasSelection: boolean;
-  isReferenceMinimized: boolean;
-  isReferenceOpen: boolean;
   shapeMode: ShapeMode;
   shapeRadius: number;
   shapeTool: ShapeTool;
@@ -143,9 +133,6 @@ interface FloatingPanelsProps {
   onGradientKindChange: (kind: GradientKind) => void;
   onGradientPatternChange: (pattern: GradientPattern) => void;
   onGradientStartColorChange: (color: string) => void;
-  onReferenceClose: () => void;
-  onReferenceMinimize: () => void;
-  onReferencePickColor: (color: string) => void;
   onShapeModeChange: (mode: ShapeMode) => void;
   onShapeRadiusChange: (radius: number) => void;
 }
@@ -270,38 +257,6 @@ interface ExportPreviewProps {
   selectedFrameId: string;
 }
 
-const extractPalette = (image: HTMLImageElement): PaletteEntry[] => {
-  const sampleSize = 96;
-  const ratio = Math.min(
-    sampleSize / image.naturalWidth,
-    sampleSize / image.naturalHeight,
-    1
-  );
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return [];
-  }
-  context.imageSmoothingEnabled = false;
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
-  const counts = new Map<string, number>();
-  for (let index = 0; index < data.length; index += 4) {
-    if (data[index + 3] < 16) {
-      continue;
-    }
-    const color = rgbToHex(data[index], data[index + 1], data[index + 2]);
-    counts.set(color, (counts.get(color) ?? 0) + 1);
-  }
-  const paletteEntries = [...counts.entries()].map(([color, count]) => ({
-    color,
-    count,
-  }));
-  paletteEntries.sort((a, b) => b.count - a.count);
-  return paletteEntries.slice(0, 32);
-};
 
 const selectionModes = [
   { icon: SquareDashed, label: "Box", value: "box" },
@@ -1664,345 +1619,6 @@ const ToolGroup = <T extends string>({
   );
 };
 
-const ReferencePanel = ({
-  isMinimized,
-  onClose,
-  onMinimize,
-  onPickColor,
-}: ReferencePanelProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const panelRef = useRef<HTMLElement | null>(null);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const dragOffsetRef = useRef<Point | null>(null);
-  const resizeDragRef = useRef<{
-    startHeight: number;
-    startWidth: number;
-    startX: number;
-    startY: number;
-  } | null>(null);
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const [imageName, setImageName] = useState("Reference");
-  const [paletteEntries, setPaletteEntries] = useState<PaletteEntry[]>([]);
-  const [panelSize, setPanelSize] = useState<Size>({
-    height: 430,
-    width: 420,
-  });
-  const [panelPosition, setPanelPosition] = useState<Point>({ x: 686, y: 72 });
-  const [isResizeHover, setIsResizeHover] = useState(false);
-  const [referenceZoom, setReferenceZoom] = useState(1);
-  const [viewportSize, setViewportSize] = useState<Size>({
-    height: 320,
-    width: 420,
-  });
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) {
-      return;
-    }
-    const observer = new ResizeObserver(([entry]) => {
-      const { height: nextHeight, width: nextWidth } = entry.contentRect;
-      setViewportSize({
-        height: Math.max(1, Math.round(nextHeight)),
-        width: Math.max(1, Math.round(nextWidth)),
-      });
-    });
-    observer.observe(viewport);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) {
-      return;
-    }
-    canvas.width = viewportSize.width;
-    canvas.height = viewportSize.height;
-    context.imageSmoothingEnabled = false;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#1f2024";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    if (!image) {
-      return;
-    }
-    const drawWidth = image.naturalWidth * referenceZoom;
-    const drawHeight = image.naturalHeight * referenceZoom;
-    context.drawImage(
-      image,
-      (canvas.width - drawWidth) / 2,
-      (canvas.height - drawHeight) / 2,
-      drawWidth,
-      drawHeight
-    );
-  }, [image, referenceZoom, viewportSize]);
-
-  const loadReference = (file: File) => {
-    const source = URL.createObjectURL(file);
-    const nextImage = new Image();
-    nextImage.addEventListener("load", () => {
-      URL.revokeObjectURL(source);
-      setImage(nextImage);
-      setImageName(file.name);
-      setPaletteEntries(extractPalette(nextImage));
-      setReferenceZoom(
-        Math.min(
-          viewportSize.width / nextImage.naturalWidth,
-          viewportSize.height / nextImage.naturalHeight,
-          1
-        )
-      );
-    });
-    nextImage.src = source;
-  };
-
-  const movePanel = (event: React.PointerEvent<HTMLElement>) => {
-    if (!dragOffsetRef.current) {
-      return;
-    }
-    const panel = panelRef.current;
-    const panelWidth = panel?.offsetWidth ?? 260;
-    const panelHeight = panel?.offsetHeight ?? 42;
-    setPanelPosition({
-      x: clamp(
-        event.clientX - dragOffsetRef.current.x,
-        window.innerWidth - panelWidth
-      ),
-      y: clamp(
-        event.clientY - dragOffsetRef.current.y,
-        window.innerHeight - panelHeight
-      ),
-    });
-  };
-
-  const stopMovingPanel = () => {
-    dragOffsetRef.current = null;
-  };
-
-  const getReferenceHitTarget = (event: React.PointerEvent<HTMLElement>) => {
-    const rect = panelRef.current?.getBoundingClientRect();
-    if (!rect) {
-      return null;
-    }
-    return hitTestZones({
-      point: { x: event.clientX, y: event.clientY },
-      previousTarget: isResizeHover ? { kind: "reference-resize" } : null,
-      zones: [
-        {
-          id: "reference-resize",
-          magneticRadius: 10,
-          priority: 100,
-          rect: {
-            height: 22,
-            width: 22,
-            x: rect.right - 22,
-            y: rect.bottom - 22,
-          },
-          target: { kind: "reference-resize" },
-        },
-      ],
-    });
-  };
-
-  const updateResizeHover = (event: React.PointerEvent<HTMLElement>) => {
-    if (isMinimized || resizeDragRef.current || dragOffsetRef.current) {
-      return;
-    }
-    const hit = getReferenceHitTarget(event);
-    setIsResizeHover(Boolean(hit));
-  };
-
-  const startReferenceResize = (event: React.PointerEvent<HTMLElement>) => {
-    if (isMinimized || !getReferenceHitTarget(event)) {
-      return false;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    resizeDragRef.current = {
-      startHeight: panelSize.height,
-      startWidth: panelSize.width,
-      startX: event.clientX,
-      startY: event.clientY,
-    };
-    setIsResizeHover(true);
-    return true;
-  };
-
-  const moveReferenceResize = (event: React.PointerEvent<HTMLElement>) => {
-    const drag = resizeDragRef.current;
-    if (!drag) {
-      return false;
-    }
-    setPanelSize({
-      height: Math.min(
-        Math.max(180, drag.startHeight + event.clientY - drag.startY),
-        window.innerHeight - 140
-      ),
-      width: Math.min(
-        Math.max(260, drag.startWidth + event.clientX - drag.startX),
-        window.innerWidth - 48
-      ),
-    });
-    return true;
-  };
-
-  const stopReferenceResize = () => {
-    resizeDragRef.current = null;
-  };
-
-  const pickReferenceColor = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) {
-      return;
-    }
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor(
-      ((event.clientX - rect.left) / rect.width) * canvas.width
-    );
-    const y = Math.floor(
-      ((event.clientY - rect.top) / rect.height) * canvas.height
-    );
-    const [red, green, blue, alpha] = context.getImageData(x, y, 1, 1).data;
-    if (alpha === 0) {
-      return;
-    }
-    onPickColor(rgbToHex(red, green, blue));
-  };
-
-  return (
-    <section
-      ref={panelRef}
-      aria-label="Reference"
-      className={isMinimized ? "reference-panel minimized" : "reference-panel"}
-      style={{
-        cursor: isResizeHover ? "nwse-resize" : undefined,
-        height: isMinimized ? undefined : panelSize.height,
-        left: panelPosition.x,
-        top: panelPosition.y,
-        width: isMinimized ? undefined : panelSize.width,
-      }}
-      onPointerCancel={() => {
-        stopMovingPanel();
-        stopReferenceResize();
-      }}
-      onPointerDown={(event) => {
-        startReferenceResize(event);
-      }}
-      onPointerMove={(event) => {
-        if (moveReferenceResize(event)) {
-          return;
-        }
-        updateResizeHover(event);
-      }}
-      onPointerLeave={() => {
-        if (!resizeDragRef.current) {
-          setIsResizeHover(false);
-        }
-      }}
-      onPointerUp={() => {
-        stopReferenceResize();
-      }}
-    >
-      <div
-        className="reference-header"
-        onPointerCancel={stopMovingPanel}
-        onPointerDown={(event) => {
-          if (isResizeHover) {
-            return;
-          }
-          if (
-            event.target instanceof Element &&
-            event.target.closest("button")
-          ) {
-            return;
-          }
-          event.currentTarget.setPointerCapture(event.pointerId);
-          const rect = panelRef.current?.getBoundingClientRect();
-          dragOffsetRef.current = {
-            x: event.clientX - (rect?.left ?? 0),
-            y: event.clientY - (rect?.top ?? 0),
-          };
-        }}
-        onPointerMove={movePanel}
-        onPointerUp={stopMovingPanel}
-      >
-        <span className="reference-title">{imageName}</span>
-        <div className="reference-actions">
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            Open
-          </button>
-          <button
-            aria-label="Minimize reference"
-            type="button"
-            onClick={onMinimize}
-          >
-            <Minus aria-hidden="true" />
-          </button>
-          <button aria-label="Close reference" type="button" onClick={onClose}>
-            <X aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-      {isMinimized ? null : (
-        <>
-          <div ref={viewportRef} className="reference-viewport">
-            <canvas
-              ref={canvasRef}
-              aria-label="Reference canvas"
-              className="reference-canvas"
-              height={viewportSize.height}
-              width={viewportSize.width}
-              onPointerDown={pickReferenceColor}
-              onWheel={(event) => {
-                event.preventDefault();
-                setReferenceZoom((current) =>
-                  clampZoom(current * Math.exp(-event.deltaY * 0.002))
-                );
-              }}
-            />
-          </div>
-          <div aria-label="Reference palette" className="reference-palette">
-            {paletteEntries.length === 0 ? (
-              <span className="reference-empty">Open an image</span>
-            ) : (
-              paletteEntries.map((entry) => (
-                <button
-                  aria-label={`Pick ${entry.color}`}
-                  className="reference-swatch"
-                  key={entry.color}
-                  style={{ backgroundColor: entry.color }}
-                  title={entry.color}
-                  type="button"
-                  onClick={() => onPickColor(entry.color)}
-                />
-              ))
-            )}
-          </div>
-        </>
-      )}
-      {isMinimized ? null : (
-        <span aria-hidden="true" className="reference-resize-hit" />
-      )}
-      <input
-        ref={fileInputRef}
-        accept="image/*"
-        aria-label="Reference image file"
-        className="reference-file"
-        type="file"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) {
-            loadReference(file);
-          }
-        }}
-      />
-    </section>
-  );
-};
-
 export const FloatingPanels = ({
   activeTool,
   gradientEndColor,
@@ -2011,17 +1627,12 @@ export const FloatingPanels = ({
   gradientStartColor,
   canDeleteSelection,
   hasSelection,
-  isReferenceMinimized,
-  isReferenceOpen,
   onClearSelection,
   onDeleteSelection,
   onGradientEndColorChange,
   onGradientKindChange,
   onGradientPatternChange,
   onGradientStartColorChange,
-  onReferenceClose,
-  onReferenceMinimize,
-  onReferencePickColor,
   onShapeModeChange,
   onShapeRadiusChange,
   shapeMode,
@@ -2075,14 +1686,7 @@ export const FloatingPanels = ({
         onShapeRadiusChange={onShapeRadiusChange}
       />
     ) : null}
-    {isReferenceOpen ? (
-      <ReferencePanel
-        isMinimized={isReferenceMinimized}
-        onClose={onReferenceClose}
-        onMinimize={onReferenceMinimize}
-        onPickColor={onReferencePickColor}
-      />
-    ) : null}
+
   </>
 );
 

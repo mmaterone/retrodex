@@ -287,3 +287,60 @@ Source frame ingest defaults to hidden-grid inference. Unless the user supplies
 an explicit canvas size, `sourceFrames[].gridStrategy` should stay
 `infer-hidden-grid`; this estimates the generated logical pixel grid and
 materializes it with nearest-neighbor sampling instead of blind downsampling.
+
+## Vision planner defaults
+
+`VisionToPixelRequest` defaults to contain fitting and nearest-neighbor sampling.
+`sampling: smooth` enables Lanczos for continuous-tone references;
+`edgeDarkening: true` adds edge contrast before the final quantization.
+The output retains source alpha above `alphaThreshold` and uses at most
+`maxColors` visible RGB colors. Uncertain background detection preserves pixels
+and reports a warning. Applying a plan requires the existing editor canvas size,
+checks the revision again after planning, and records a rollback checkpoint.
+
+## Agent drawing operations
+
+The shared `EditorOperation` union also includes:
+
+- `polygon-pixels`: integer `points` (3–256), `color`, `mode` (`fill` by default,
+  or `outline`), and inward `thickness` (1–32).
+- `mirror-pixels`: in-frame `sourceBounds`, `axis` (`vertical` by default),
+  optional integer/half-integer `axisPosition`, and `copyTransparent` (false).
+- `paint-mask`: `color` and at least one `targetMaskLayerIds` entry.
+
+All three require `frameId` and support `targetMaskLayerIds` and `respectAlpha`
+(false). Explicit target masks form a union; destination writes intersect that
+union with pixel selection and exclude locked mask pixels. An explicit empty
+pixel selection permits no writes. Pixel selection applies only to its selected
+frame. Selection bounds are used only when there is no pixel selection mask.
+Locked/target mask and selection geometry must match the frame; missing targets
+fail validation instead of falling back to unrestricted painting.
+
+## Generated opaque artwork cleanup
+
+`artwork.imagegen-grid.v1` is for an explicitly declared native canvas enlarged
+8x by the generator. Preserve the raw source and run its cleanup before importing
+the native result into the editor. The pipeline detects backdrop type for
+reporting, sets alpha to opaque by explicit full-bleed artwork policy, samples
+cell-interior medians, quantizes to 24 colors using max coverage with refinement,
+then scores and writes diagnostics. It does not remove the painted landscape.
+
+`sample-pixel-grid` checks source dimensions against `run.canvas * cellSize`;
+nonmatching dimensions fail. Its measurements report how closely the source
+matches flat logical cells; the requested grid is not claimed to be inferred.
+Already-native run dimensions are preserved on a repeat pass. `set-opaque-alpha`
+must only be used for artwork intended to be fully opaque, never transparent
+sprites. `quantize-palette` supports `median-cut` and `max-coverage` methods with
+an optional refinement count. Keep both initial and refined cleanup artifacts
+when choosing a palette by visual review.
+
+### Drawing guide
+
+`EditorDocument.drawingGuide` is optional for compatibility with existing runs.
+It contains a persistent visual reference, placement, paired landmarks and
+normalized distance measurements; see `schemas/drawing-guide.ts`. Guides do not
+modify frame pixels, palette, cleanup or export content. Read derived measurements
+at `GET /runs/:id/editor/drawing-guide`, and write with the revision-checked
+`set-drawing-guide` editor operation. Coordinates on the reference are normalized
+source coordinates, while artwork coordinates use canvas pixels. The UI saves
+through the existing document autosave and exposes an explicit retry button.

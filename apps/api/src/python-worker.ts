@@ -9,10 +9,13 @@ import type {
   Frame,
   PixelGrid,
   Run,
+  VisionToPixelPlan,
+  VisionToPixelRequest,
 } from "@retrodex/contracts";
 import {
   frameSchema,
   pixelGridResponseSchema,
+  visionToPixelPlanSchema,
 } from "@retrodex/contracts";
 
 import { readJsonFile, writeJsonAtomic } from "./json.js";
@@ -222,6 +225,27 @@ export const writePixelGridWithPython = async ({
       ])
     );
   return result;
+};
+
+export const planVisionToPixelWithPython = async ({
+  payloadPath,
+  request,
+}: {
+  payloadPath: string;
+  request: VisionToPixelRequest;
+}): Promise<VisionToPixelPlan> => {
+  await writeJsonAtomic(payloadPath, request);
+  return visionToPixelPlanSchema.parse(
+    await runProcessJson(
+      [
+        "-m",
+        "pixel_character_core.vision_to_pixel",
+        "--payload",
+        payloadPath,
+      ],
+      60_000
+    )
+  );
 };
 
 export const cleanupFrameWithPython = async ({

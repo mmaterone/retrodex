@@ -144,6 +144,7 @@ export interface PaletteEntry {
 }
 
 export interface CanvasSnapshot {
+  selectionMask?: boolean[];
   activeMaskLayerId: string;
   grid: CellColor[];
   maskLayers: MaskLayer[];

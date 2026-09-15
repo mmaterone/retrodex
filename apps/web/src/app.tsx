@@ -1,3 +1,6 @@
+import { createPortraitGuide } from "@retrodex/contracts";
+import type { DrawingGuide } from "@retrodex/contracts";
+import { DrawingGuideOverlay, DrawingGuidePanel, SelectionProportions } from "./components/editor/drawing-guide-panel";
 import type { EditorDocument } from "@retrodex/contracts";
 import { Download } from "lucide-react";
 import type { CSSProperties } from "react";
@@ -486,6 +489,10 @@ export const App = () => {
   const initialFrameIdRef = useRef(createFrameId());
   const initialMaskLayerIdRef = useRef(createFrameId());
   const editorDocumentRef = useRef<EditorDocument | null>(null);
+  const [drawingGuide, setDrawingGuide] = useState<DrawingGuide>(createPortraitGuide);
+  const drawingGuideRef = useRef(drawingGuide);
+  const [guideStatus, setGuideStatus] = useState("Open a run to save reference and landmarks.");
+  const [guideArtwork, setGuideArtwork] = useState("");
   const editorRunIdRef = useRef<string | null>(getEditorSessionParams().runId);
   const hydrationCompleteRef = useRef(false);
   const autosaveTimerRef = useRef<number | null>(null);
@@ -921,11 +928,13 @@ export const App = () => {
       maskLayers,
       selectedFrameId,
     });
+    snapshot.drawingGuide = drawingGuideRef.current;
     const document = await saveEditorDocument(snapshot, {
       expectedRevision: baseDocument.saveState.revision,
       writeFrameImages: false,
     });
     editorDocumentRef.current = document;
+    if (snapshot.drawingGuide === drawingGuideRef.current) setGuideStatus("Reference and landmarks saved.");
     syncEditorWorkspaceStatus(document);
     if (debugFrame) {
       const savedFrame =
@@ -1113,6 +1122,7 @@ export const App = () => {
             "effect-autosave"
           );
         } catch (error: unknown) {
+          setGuideStatus("Save failed. Use Save guide to retry; reload if another editor changed this run.");
           console.error("Failed to autosave editor document", error);
         }
       };
@@ -1131,6 +1141,7 @@ export const App = () => {
     frames,
     maskLayers,
     selectedFrameId,
+    drawingGuide,
   ]);
 
   const openExportDialog = () => {
@@ -1421,6 +1432,9 @@ export const App = () => {
           ) ??
           hydratedFrames[0];
         editorDocumentRef.current = document;
+        drawingGuideRef.current = document.drawingGuide ?? createPortraitGuide();
+        setDrawingGuide(drawingGuideRef.current);
+        setGuideStatus("Reference and landmarks saved.");
         editorRunIdRef.current = runId;
         syncEditorWorkspaceStatus(document);
         setFrames(hydratedFrames);
@@ -1548,6 +1562,7 @@ export const App = () => {
   };
 
   const createSnapshot = (): CanvasSnapshot => ({
+    selectionMask: [...selectionMaskRef.current],
     activeMaskLayerId,
     grid: readGrid(),
     maskLayers: cloneMaskLayers(maskLayers),
@@ -1793,6 +1808,7 @@ export const App = () => {
       clearSelectionState();
     }
     restoreGrid(snapshot.grid);
+    if (snapshot.selectionMask) applySelectionMask([...snapshot.selectionMask]);
   };
 
   const undoCanvas = () => {
@@ -2936,6 +2952,33 @@ export const App = () => {
     };
   };
 
+  const changeDrawingGuide = (guide: DrawingGuide) => {
+    drawingGuideRef.current = guide;
+    setDrawingGuide(guide);
+    setGuideStatus(editorRunIdRef.current ? "Saving…" : "Session only — open a run to save.");
+    if (editorRunIdRef.current) markEditorWorkspaceDirty();
+  };
+  useEffect(() => {
+    if (isReferenceOpen && canvasRef.current) setGuideArtwork(canvasRef.current.toDataURL());
+  }, [isReferenceOpen, frames, selectedFrameId, canvasSize]);
+
+  const applyNumericProportions = (value: { width: number; height: number; x: number; y: number; rotation: number }) => {
+    if (!selectionBounds || !hasActiveSelection() || editorMode !== "edit" || Object.values(value).some((v) => !Number.isFinite(v)) || value.width < 1 || value.height < 1) return;
+    const before = readGrid();
+    const result = transformSelectionGrid(before, selectionBounds, selectionMaskRef.current,
+      { x: value.width / selectionBounds.width, y: value.height / selectionBounds.height },
+      value.rotation, getSelectionCenter(selectionBounds), { x: value.x, y: value.y });
+    if (maskLayers.some((layer) => layer.regenerationPolicy?.locked && layer.mask.some((locked, i) => locked && before[i] !== result.grid[i]))) {
+      window.alert("This transform touches a locked mask. Adjust the selection first."); return;
+    }
+    pushHistory();
+    writeGrid(result.grid, result.mask);
+    setTransformOrigin(getSelectionCenter(getMaskBoundsForSize(canvasSize, result.mask) ?? selectionBounds));
+    const syncedFrames = getSyncedFrames();
+    setFrames(syncedFrames);
+    scheduleEditorDocumentSave(syncedFrames, "selection-proportions");
+  };
+
   const hasSelection = selectionMask.some(Boolean);
   const showSelection = activeTool === "transform" && selectionBounds;
   const canDeleteSelection = canDeleteActiveTarget(
@@ -3062,8 +3105,6 @@ export const App = () => {
         gradientPattern={gradientPattern}
         gradientStartColor={gradientStartColor}
         hasSelection={hasSelection}
-        isReferenceMinimized={isReferenceMinimized}
-        isReferenceOpen={isReferenceOpen}
         shapeMode={shapeMode}
         shapeRadius={shapeRadius}
         shapeTool={shapeTool}
@@ -3073,14 +3114,14 @@ export const App = () => {
         onGradientKindChange={setGradientKind}
         onGradientPatternChange={setGradientPattern}
         onGradientStartColorChange={setGradientStartColor}
-        onReferenceClose={() => setIsReferenceOpen(false)}
-        onReferenceMinimize={() =>
-          setIsReferenceMinimized((current) => !current)
-        }
-        onReferencePickColor={setCurrentColor}
         onShapeModeChange={setShapeMode}
         onShapeRadiusChange={setShapeRadius}
       />
+      {isReferenceOpen && <DrawingGuidePanel guide={drawingGuide} size={canvasSize} artwork={guideArtwork}
+        status={guideStatus} onPickColor={setCurrentColor} isMinimized={isReferenceMinimized} onMinimize={() => setIsReferenceMinimized((current) => !current)} onChange={changeDrawingGuide} onClose={() => setIsReferenceOpen(false)}
+        onSave={() => { void saveProject().catch(() => setGuideStatus("Save failed. Reload if another editor changed this run.")); }} />}
+      {activeTool === "transform" && editorMode === "edit" && hasSelection && selectionBounds &&
+        <SelectionProportions bounds={selectionBounds} onApply={applyNumericProportions} />}
       <MaskLayersPanel
         activeLayerId={activeMaskLayerId}
         isVisible={editorMode === "mask"}
@@ -3122,6 +3163,7 @@ export const App = () => {
           onPointerMove={move}
           onPointerUp={stop}
         />
+        <DrawingGuideOverlay guide={drawingGuide} size={canvasSize} />
         <div
           className="art-layer"
           style={{

@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { basename, isAbsolute, resolve } from "node:path";
 import { URL } from "node:url";
 
+import { createPortraitGuide, measureDrawingGuide } from "@retrodex/contracts";
 import type { EditorDocument } from "@retrodex/contracts";
 
 import { ApiError, toApiError } from "./errors.js";
@@ -350,6 +351,12 @@ const routeRunRequest = async (
       sendJson(response, 200, { document });
       return true;
     }
+    if (request.method === "GET" && childId === "drawing-guide") {
+      const document = await repository.readEditorDocument(runId);
+      const guide = document.drawingGuide ?? createPortraitGuide();
+      sendJson(response, 200, { guide, measurements: measureDrawingGuide(guide), revision: document.saveState.revision });
+      return true;
+    }
     if (request.method === "GET" && childId === "status") {
       sendJson(response, 200, {
         status: await repository.readEditorStatus(runId),
@@ -409,6 +416,30 @@ const routeRunRequest = async (
         response,
         200,
         await repository.applyEditIntent(runId, await readBody(request))
+      );
+      return true;
+    }
+    if (
+      request.method === "POST" &&
+      childId === "vision-to-pixel" &&
+      action === "preview"
+    ) {
+      sendJson(
+        response,
+        200,
+        await repository.previewVisionToPixel(runId, await readBody(request))
+      );
+      return true;
+    }
+    if (
+      request.method === "POST" &&
+      childId === "vision-to-pixel" &&
+      action === "apply"
+    ) {
+      sendJson(
+        response,
+        200,
+        await repository.applyVisionToPixel(runId, await readBody(request))
       );
       return true;
     }

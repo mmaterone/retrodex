@@ -373,3 +373,151 @@ test("CLI resolves arbitrary edit targets as semantic parts", async () => {
     server.close();
   }
 });
+
+test("CLI requests vision-to-pixel plans through the local HTTP API", async () => {
+  let receivedBody = "";
+  const server = createServer((request, response) => {
+    assert.equal(request.method, "POST");
+    assert.equal(
+      request.url,
+      "/runs/run_1/editor/vision-to-pixel/preview"
+    );
+    request.on("data", (chunk: Buffer) => {
+      receivedBody += chunk.toString("utf-8");
+    });
+    request.on("end", () => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          plan: {
+            canvas: { height: 64, width: 64 },
+            features: [{ id: "face", kind: "face-candidate" }],
+          },
+        })
+      );
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const cli = runCli(
+      [
+        "vision",
+        "plan",
+        "run_1",
+        "frame_01",
+        "--expected-revision",
+        "4",
+        "--sampling",
+        "nearest",
+        "--source",
+        "/tmp/source.png",
+        "--width",
+        "64",
+        "--height",
+        "64",
+        "--colors",
+        "12",
+        "--crop",
+        "contain",
+      ],
+      `http://127.0.0.1:${address.port}`
+    );
+    const result = await cli.getOutput();
+    assert.deepEqual(JSON.parse(result.stdout), {
+      plan: {
+        canvas: { height: 64, width: 64 },
+        features: [{ id: "face", kind: "face-candidate" }],
+      },
+    });
+    assert.deepEqual(JSON.parse(receivedBody), {
+      canvas: { height: 64, width: 64 },
+      cropMode: "contain",
+      frameId: "frame_01",
+      maxColors: 12,
+      sourcePath: "/tmp/source.png",
+      expectedRevision: 4,
+      sampling: "nearest",
+    });
+  } finally {
+    server.close();
+  }
+});
+
+for (const changesDuringRead of [false, true]) {
+  test(`CLI observe ${changesDuringRead ? "rejects mixed revisions" : "collects frame context and resolves preview URLs"}`, async () => {
+    let reads = 0;
+    const server = createServer((request, response) => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      if (request.url === "/runs/run_1/editor") {
+        reads += 1;
+        response.end(JSON.stringify({ document: {
+          runId: "run_1", selectedFrameId: "frame_01",
+          saveState: { revision: changesDuringRead ? reads : 4 },
+          canvas: { width: 2, height: 1 }, masks: [], selection: {}, timeline: {},
+          frames: [{ frameId: "frame_01", grid: { cells: ["#ff0000", null] } }],
+        } }));
+      } else {
+        assert.equal(request.url, "/runs/run_1/editor/frames/frame_01/inspect");
+        response.end(JSON.stringify({ inspection: {
+          fullPreviewUrl: "/preview.png", pixelMapUrl: "/pixels", zoomHints: [],
+        } }));
+      }
+    });
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    try {
+      const address = server.address();
+      assert.ok(address && typeof address === "object");
+      const api = `http://127.0.0.1:${address.port}`;
+      const cli = runCli(["observe", "run_1"], api);
+      if (changesDuringRead) {
+        await assert.rejects(cli.getOutput(), /Editor changed during observation/);
+      } else {
+        const result = JSON.parse((await cli.getOutput()).stdout);
+        assert.equal(result.revision, 4);
+        assert.deepEqual(result.frame.grid.cells, ["#ff0000", null]);
+        assert.equal(result.inspection.fullPreviewUrl, `${api}/preview.png`);
+        assert.equal(reads, 2);
+      }
+    } finally { server.close(); }
+  });
+}
+
+for (const sample of [
+  { command: "polygon", json: { points: [{ x: 1, y: 1 }, { x: 4, y: 1 }, { x: 2, y: 4 }] },
+    flags: ["--mode", "outline", "--thickness", "2"], expected: { type: "polygon-pixels", mode: "outline", thickness: 2 } },
+  { command: "mirror", json: { sourceBounds: { x: 1, y: 1, width: 3, height: 3 } },
+    flags: ["--axis", "vertical", "--axis-position", "7.5", "--copy-transparent"],
+    expected: { type: "mirror-pixels", axis: "vertical", axisPosition: 7.5, copyTransparent: true } },
+  { command: "paint-mask", json: { color: null }, flags: ["--respect-alpha"],
+    expected: { type: "paint-mask", color: null, respectAlpha: true } },
+]) {
+  test(`CLI forwards ${sample.command} geometry, mask targets and revision`, async () => {
+    let body = "";
+    const server = createServer((request, response) => {
+      assert.equal(request.method, "PATCH");
+      assert.equal(request.url, "/runs/run_1/editor/operations");
+      request.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+      request.on("end", () => {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ document: {} }));
+      });
+    });
+    server.listen(0, "127.0.0.1"); await once(server, "listening");
+    try {
+      const address = server.address(); assert.ok(address && typeof address === "object");
+      await runCli(["tools", sample.command, "run_1", "frame_01", "--json", JSON.stringify(sample.json),
+        "--masks", "body,head", "--expected-revision", "8", ...sample.flags],
+        `http://127.0.0.1:${address.port}`).getOutput();
+      const payload = JSON.parse(body);
+      assert.equal(payload.expectedRevision, 8);
+      assert.deepEqual(payload.operations, [{
+        ...(sample.command !== "mirror" ? { color: "#111111" } : {}),
+        ...sample.json, ...sample.expected, frameId: "frame_01", targetMaskLayerIds: ["body", "head"],
+      }]);
+    } finally { server.close(); }
+  });
+}

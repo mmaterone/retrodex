@@ -303,7 +303,7 @@ def detect_backdrop(context: CleanupContext, _params: dict[str, Any]) -> None:
     context.metrics["backdropLabel"] = analysis.label
     if analysis.kind == "none":
         context.warnings.append(
-            "No clear backdrop was detected; cleanup will use conservative border removal."
+            "No clear removable backdrop was detected. Background removal is controlled by the selected pipeline."
         )
 
 
@@ -498,7 +498,53 @@ def write_diagnostics(context: CleanupContext, _params: dict[str, Any]) -> None:
     context.metrics["diagnosticsWritten"] = True
 
 
+def sample_pixel_grid(context: CleanupContext, params: dict[str, Any]) -> None:
+    from pixel_character_core.pixel_grid_cleanup import sample_pixel_cells
+    cell_size = int(params.get("cellSize", 8))
+    logical = context.job.run["canvas"]
+    target = (int(logical["width"]), int(logical["height"]))
+    if context.image.size == target:
+        context.metrics.update({"gridBasis": "already-native-run-canvas", "logicalWidth": target[0], "logicalHeight": target[1]})
+        return
+    if context.image.size != (target[0] * cell_size, target[1] * cell_size):
+        raise ValueError("Source size does not match the run canvas enlarged by the declared cell size.")
+    context.image, metrics = sample_pixel_cells(
+        context.image, int(params.get("cellSize", 8)), float(params.get("marginRatio", 0.25))
+    )
+    context.metrics.update(metrics)
+    if metrics["sourceNearlyFlatCellFraction"] < 0.95:
+        context.warnings.append("Source is not an exact flat-cell grid; reconstructed the explicit generation-contract grid using interior medians.")
+
+
+def quantize_palette(context: CleanupContext, params: dict[str, Any]) -> None:
+    from pixel_character_core.vision_to_pixel import _quantize
+    limit = int(params.get("maxColors", 24))
+    if not 2 <= limit <= 32:
+        raise ValueError("Palette limit must be between 2 and 32.")
+    method_name = params.get("method", "median-cut")
+    methods = {"median-cut": Image.Quantize.MEDIANCUT, "max-coverage": Image.Quantize.MAXCOVERAGE}
+    if method_name not in methods:
+        raise ValueError("Unknown palette quantization method.")
+    refinement = int(params.get("refinement", 0))
+    if not 0 <= refinement <= 20:
+        raise ValueError("Palette refinement must be between 0 and 20.")
+    context.image = _quantize(context.image, limit, methods[method_name], refinement)
+    context.metrics["quantizationMethod"] = method_name
+    context.metrics["paletteRefinement"] = refinement
+    context.metrics["quantizedPaletteLimit"] = limit
+    context.metrics["quantizedVisibleColors"] = len(palette_colors(context.image))
+
+
+def set_opaque_alpha(context: CleanupContext, _params: dict[str, Any]) -> None:
+    context.metrics["sourceAlphaExtrema"] = list(context.image.getchannel("A").getextrema())
+    context.image.putalpha(255)
+    context.metrics["alphaPolicy"] = "explicit-full-bleed-opaque-artwork"
+
+
 STEP_REGISTRY: dict[str, StepHandler] = {
+    "sample-pixel-grid": sample_pixel_grid,
+    "quantize-palette": quantize_palette,
+    "set-opaque-alpha": set_opaque_alpha,
     "align-anchor": align_anchor,
     "detect-backdrop": detect_backdrop,
     "lock-palette": lock_palette,

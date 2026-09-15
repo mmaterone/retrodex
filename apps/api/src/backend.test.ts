@@ -12,6 +12,7 @@ import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
 import {
+  createPortraitGuide,
   animationFixPreviewResponseSchema,
   animationFixRequestSchema,
   animationFixResponseSchema,
@@ -39,6 +40,8 @@ import {
   runSchema,
   savedAnimationSchema,
   schemaVersion,
+  visionToPixelApplyResponseSchema,
+  visionToPixelPlanResponseSchema,
   visualSummarySchema,
 } from "@retrodex/contracts";
 import type {
@@ -783,6 +786,68 @@ test("RunRepository imports approved frames into editor and reads/writes pixels"
       ],
     });
     assert.equal(patched.frames[0]?.grid.cells[1], "#00ff00");
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("RunRepository previews and applies vision-to-pixel plans", async () => {
+  const { repository, root, sourcePath } = await createRepositoryFixture();
+  try {
+    const run = await repository.createRun({
+      asset: {
+        action: "run",
+        frames: 1,
+        sheet: "single",
+        style: "pixel-art",
+        type: "character",
+        view: "side",
+      },
+      name: "Vision Planner",
+      sourceFrames: [{ path: sourcePath }],
+    });
+    await writeFixtureFrame(repository, run);
+    await repository.setFrameApproval(run.id, "frame_01", {
+      approved: true,
+      approvedBy: "agent",
+    });
+    const document = await repository.importApprovedFramesToEditor(run.id);
+
+    const preview = await repository.previewVisionToPixel(run.id, {
+      canvas: run.canvas,
+      cropMode: "cover",
+      frameId: "frame_01",
+      maxColors: 8,
+      sourcePath,
+    });
+    visionToPixelPlanResponseSchema.parse(preview);
+    assert.equal(preview.plan.canvas.width, run.canvas.width);
+    assert.equal(preview.plan.grid.cells.length, run.canvas.width * run.canvas.height);
+    assert.ok(preview.plan.features.some((feature) => feature.id === "silhouette"));
+
+    await assert.rejects(repository.applyVisionToPixel(run.id, {
+      canvas: { width: 64, height: 64 }, sourcePath,
+    }), /Apply must use the editor canvas size/);
+    assert.equal((await repository.readEditorDocument(run.id)).saveState.revision, document.saveState.revision);
+
+    const applied = await repository.applyVisionToPixel(run.id, {
+      canvas: run.canvas,
+      cropMode: "cover",
+      expectedRevision: document.saveState.revision,
+      frameId: "frame_01",
+      maxColors: 8,
+      sourcePath,
+    });
+    visionToPixelApplyResponseSchema.parse(applied);
+    assert.equal(applied.frameId, "frame_01");
+    assert.equal(applied.document.saveState.revision, document.saveState.revision + 1);
+    assert.equal(applied.document.frames[0]?.grid.cells.length, run.canvas.width * run.canvas.height);
+    assert.ok(applied.operationId);
+    const checkpoints = await repository.listEditorCheckpoints(run.id);
+    assert.ok(checkpoints.some((checkpoint) => checkpoint.label === "Before vision-to-pixel apply" &&
+      checkpoint.document.saveState.revision === document.saveState.revision));
+    assert.ok(applied.plan.palette.length <= 8);
+    assert.ok((await stat(repository.framePngPath(run, "frame_01"))).size > 0);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
@@ -2182,4 +2247,71 @@ test("OpenAPI schemas stay in parity with runtime validation examples", async ()
   } finally {
     await rm(root, { force: true, recursive: true });
   }
+});
+
+test("drawing operations persist exact pixels, reject stale revisions and undo as one batch", async () => {
+  const { repository, root, sourcePath } = await createRepositoryFixture();
+  try {
+    const run = await repository.createRun({
+      asset: { action: "idle", frames: 1, sheet: "single", style: "pixel-art", type: "character", view: "side" },
+      name: "Agent drawing", sourceFrames: [{ path: sourcePath }],
+    });
+    await writeFixtureFrame(repository, run);
+    await repository.setFrameApproval(run.id, "frame_01", { approved: true, approvedBy: "agent" });
+    const imported = await repository.importApprovedFramesToEditor(run.id);
+    const document = await repository.writeEditorDocument(editorDocumentSchema.parse({
+      ...imported,
+      frames: imported.frames.map((frame) => ({ ...frame, alphaBBox: null,
+        grid: { ...frame.grid, cells: Array(32 * 32).fill(null), palette: [] } })),
+      masks: [{ id: "body", name: "Body", color: "#ffffff", anchor: { x: 2, y: 2 }, parentId: null,
+        mask: Array.from({ length: 1024 }, (_, i) => i === 66) }],
+    }));
+    const input = { expectedRevision: document.saveState.revision, operations: [
+      { type: "polygon-pixels", frameId: "frame_01", color: "#ff0000",
+        points: [{ x: 1, y: 1 }, { x: 3, y: 1 }, { x: 3, y: 3 }, { x: 1, y: 3 }] },
+      { type: "mirror-pixels", frameId: "frame_01", sourceBounds: { x: 1, y: 1, width: 3, height: 3 } },
+      { type: "paint-mask", frameId: "frame_01", color: "#0000ff", targetMaskLayerIds: ["body"] },
+    ] };
+    validateOpenApiSchema("EditorOperationsRequest", editorOperationsRequestSchema.parse(input));
+    const applied = await repository.applyEditorOperations(run.id, input);
+    const actual = applied.frames[0].grid.cells;
+    assert.equal(actual.filter(Boolean).length, 18);
+    assert.equal(actual[66], "#0000ff");
+    assert.equal(actual[2 * 32 + 29], "#ff0000");
+    assert.deepEqual(applied.frames[0].alphaBBox, { x: 1, y: 1, width: 30, height: 3 });
+    assert.deepEqual((await repository.readPixelGrid(run.id, "frame_01")).grid.cells, actual);
+    assert.deepEqual((await repository.readEditorDocument(run.id)).frames[0].grid.cells, actual);
+    await assert.rejects(repository.applyEditorOperations(run.id, input), /changed since/);
+    const operations = await repository.listEditorOperations(run.id);
+    const batch = operations.find((operation) => operation.afterRevision === applied.saveState.revision);
+    assert.ok(batch);
+    assert.equal(batch.patches.length, 18);
+    const reverted = await repository.revertEditorOperation(run.id, { operationId: batch.id });
+    assert.ok(reverted.document.frames[0].grid.cells.every((cell) => cell === null));
+    assert.equal(reverted.document.frames[0].alphaBBox, null);
+    assert.ok((await repository.readPixelGrid(run.id, "frame_01")).grid.cells.every((cell) => cell === null));
+  } finally { await rm(root, { force: true, recursive: true }); }
+});
+
+
+test("drawing guide persists without pixel changes and enforces revision checks", async () => {
+  const { repository, root, sourcePath } = await createRepositoryFixture();
+  try {
+    const run = await repository.createRun({
+      asset: { action: "idle", frames: 1, sheet: "single", style: "pixel-art", type: "character", view: "side" },
+      name: "Proportion guide", sourceFrames: [{ path: sourcePath }],
+    });
+    await writeFixtureFrame(repository, run);
+    await repository.setFrameApproval(run.id, "frame_01", { approved: true, approvedBy: "agent" });
+    const before = await repository.importApprovedFramesToEditor(run.id);
+    const guide = createPortraitGuide();
+    guide.reference = { name: "Reference", dataUrl: `data:image/png;base64,${pngBase64}`, x: 0, y: 0, width: 32, height: 32, opacity: 0.5, overlay: true };
+    const input = { expectedRevision: before.saveState.revision, operations: [{ type: "set-drawing-guide", guide }] };
+    validateOpenApiSchema("EditorOperationsRequest", input);
+    const after = await repository.applyEditorOperations(run.id, input);
+    validateOpenApiSchema("EditorDocument", after);
+    assert.deepEqual(after.frames, before.frames);
+    assert.deepEqual((await repository.readEditorDocument(run.id)).drawingGuide, guide);
+    await assert.rejects(repository.applyEditorOperations(run.id, input), /changed since/);
+  } finally { await rm(root, { force: true, recursive: true }); }
 });

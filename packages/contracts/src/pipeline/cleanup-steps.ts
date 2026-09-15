@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const cleanupStepIdSchema = z.enum([
+  "sample-pixel-grid",
+  "quantize-palette",
+  "set-opaque-alpha",
   "validate-control-grid",
   "detect-backdrop",
   "remove-background",
@@ -140,7 +143,31 @@ export const promptOnlySheetCleanupPipeline: CleanupPipeline = {
   ],
 };
 
+export const nativePixelCleanupPipeline: CleanupPipeline = {
+  id: "native-pixel-validation-v1",
+  description: "Validate pixels drawn directly in the editor without resampling or removing the painted background.",
+  steps: [
+    { id: "score-frame", enabled: true, blocking: true, params: {} },
+    { id: "write-diagnostics", enabled: true, blocking: false, params: {} },
+  ],
+};
+
+export const generatedArtworkCleanupPipeline: CleanupPipeline = {
+  id: "generated-artwork-grid-v1",
+  description: "Reconstruct the explicitly requested 8x pixel grid, remove unintended translucency in opaque artwork, and enforce a 24-color palette.",
+  steps: [
+    { id: "detect-backdrop", enabled: true, blocking: false, params: {} },
+    { id: "set-opaque-alpha", enabled: true, blocking: true, params: {} },
+    { id: "sample-pixel-grid", enabled: true, blocking: true, params: { cellSize: 8, marginRatio: 0.25 } },
+    { id: "quantize-palette", enabled: true, blocking: true, params: { maxColors: 24, method: "max-coverage", refinement: 4 } },
+    { id: "score-frame", enabled: true, blocking: true, params: {} },
+    { id: "write-diagnostics", enabled: true, blocking: false, params: {} },
+  ],
+};
+
 export const cleanupPipelines = [
   controlGridCleanupPipeline,
   promptOnlySheetCleanupPipeline,
+  nativePixelCleanupPipeline,
+  generatedArtworkCleanupPipeline,
 ] as const;

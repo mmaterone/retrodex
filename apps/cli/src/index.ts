@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import type { EditorDocument, FrameVisualInspection } from "@retrodex/contracts";
 
 interface CliOptions {
   api: string;
@@ -194,6 +195,41 @@ const run = async (): Promise<void> => {
     print(await request(api, `/runs/${id}/editor/url`));
     return;
   }
+  if (group === "observe" && command) {
+    const runId = encodeURIComponent(command);
+    const { document } = await request<{ document: EditorDocument }>(api, `/runs/${runId}/editor`);
+    const frameId = id ?? document.selectedFrameId;
+    const frame = document.frames.find((entry) => entry.frameId === frameId);
+    if (!frame) throw new Error("Choose an existing frame to observe.");
+    const { inspection } = await request<{ inspection: FrameVisualInspection }>(
+      api, `/runs/${runId}/editor/frames/${encodeURIComponent(frame.frameId)}/inspect`
+    );
+    const { document: after } = await request<{ document: EditorDocument }>(api, `/runs/${runId}/editor`);
+    if (after.saveState.revision !== document.saveState.revision) {
+      throw new Error("Editor changed during observation. Run observe again before editing.");
+    }
+    print({
+      runId: document.runId,
+      revision: document.saveState.revision,
+      canvas: document.canvas,
+      frame,
+      masks: document.masks,
+      selection: document.selection,
+      timeline: document.timeline,
+      inspection: {
+        ...inspection,
+        fullPreviewUrl: new URL(inspection.fullPreviewUrl, `${api}/`).href,
+        pixelMapUrl: new URL(inspection.pixelMapUrl, `${api}/`).href,
+      },
+      nextSteps: [
+        "View fullPreviewUrl at native size and nearest-neighbor zoom; inspect zoomHints before detail edits.",
+        "Use frame.grid for exact coordinates. Treat heuristic features as candidates, not confirmed masks.",
+        "Draw in stages: tools polygon for silhouettes, tools mirror for symmetry, tools paint-mask for material colors and shading. Respect selection and locked masks.",
+        `Apply a small batch with --expected-revision ${document.saveState.revision}, then observe again.`,
+      ],
+    });
+    return;
+  }
   if (group === "editor" && command === "show" && id) {
     print(await request(api, `/runs/${id}/editor`));
     return;
@@ -335,6 +371,30 @@ const run = async (): Promise<void> => {
         method: "PATCH",
       })
     );
+    return;
+  }
+
+  if (group === "tools" && ["polygon", "mirror", "paint-mask"].includes(command ?? "") && id && subcommand) {
+    const input = objectJson(json);
+    const operation = {
+      ...(command !== "mirror" ? { color: "#111111" } : {}),
+      ...input,
+      ...(option(args, "--color") ? { color: option(args, "--color") } : {}),
+      ...(option(args, "--masks") ? { targetMaskLayerIds: listOption(args, "--masks") } : {}),
+      ...(args.includes("--respect-alpha") ? { respectAlpha: true } : {}),
+      ...(option(args, "--mode") ? { mode: option(args, "--mode") } : {}),
+      ...(option(args, "--thickness") ? { thickness: intOption(args, "--thickness") } : {}),
+      ...(option(args, "--axis") ? { axis: option(args, "--axis") } : {}),
+      ...(option(args, "--axis-position") !== undefined
+        ? { axisPosition: Number(option(args, "--axis-position")) } : {}),
+      ...(args.includes("--copy-transparent") ? { copyTransparent: true } : {}),
+      frameId: subcommand,
+      type: command === "polygon" ? "polygon-pixels" : command === "mirror" ? "mirror-pixels" : "paint-mask",
+    };
+    print(await request(api, `/runs/${id}/editor/operations`, {
+      body: JSON.stringify(expectedRevisionBody(args, { operations: [operation] })),
+      method: "PATCH",
+    }));
     return;
   }
 
@@ -741,6 +801,40 @@ const run = async (): Promise<void> => {
     return;
   }
 
+  if (group === "vision" && (command === "plan" || command === "apply") && id) {
+    const payload = {
+      ...objectJson(json),
+      ...(option(args, "--sampling") ? { sampling: option(args, "--sampling") } : {}),
+      ...(subcommand ? { frameId: subcommand } : {}),
+      ...(option(args, "--source")
+        ? { sourcePath: option(args, "--source") }
+        : {}),
+      ...(option(args, "--width") || option(args, "--height")
+        ? {
+            canvas: {
+              height: intOption(args, "--height", 64),
+              width: intOption(args, "--width", 64),
+            },
+          }
+        : {}),
+      ...(option(args, "--colors")
+        ? { maxColors: intOption(args, "--colors", 18) }
+        : {}),
+      ...(option(args, "--crop") ? { cropMode: option(args, "--crop") } : {}),
+    };
+    print(
+      await request(
+        api,
+        `/runs/${id}/editor/vision-to-pixel/${command === "plan" ? "preview" : "apply"}`,
+        {
+          body: JSON.stringify(expectedRevisionBody(args, payload)),
+          method: "POST",
+        }
+      )
+    );
+    return;
+  }
+
   if (group === "references" && command === "create" && id) {
     print(
       await request(api, `/runs/${id}/editor/references`, {
@@ -975,7 +1069,7 @@ const run = async (): Promise<void> => {
   }
 
   throw new Error(
-    "Unknown command. Try runs, frames, cleanup, editor, memory, pixels, tools, edit, masks, inspect, animation, references, regenerate, imagegen, checkpoints, operations, timeline, or exports."
+    "Unknown command. Try observe, vision, runs, frames, cleanup, editor, memory, pixels, tools, edit, masks, inspect, animation, references, regenerate, imagegen, checkpoints, operations, timeline, or exports."
   );
 };
 

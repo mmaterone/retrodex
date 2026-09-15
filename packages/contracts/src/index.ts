@@ -6,3 +6,5 @@ export * from "./schemas/frame";
 export * from "./schemas/run";
 export * from "./pipeline/cleanup-steps";
 export * from "./presets/deterministic-rules";
+
+export * from "./schemas/drawing-guide";

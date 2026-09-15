@@ -1,0 +1,24 @@
+.drawing-guide-panel, .selection-proportions { position: fixed; z-index: 13; border: 1px solid #ffffff22; border-radius: 16px; background: #232428f5; color: #e8e8ed; box-shadow: 0 14px 40px #0006; font: 12px/1.4 system-ui; }
+.drawing-guide-panel { top: 76px; right: 20px; width: min(430px, calc(100vw - 40px)); max-height: calc(100dvh - 165px); overflow: auto; }
+.drawing-guide-panel header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ffffff15; }
+.drawing-guide-body { padding: 12px; display: grid; gap: 12px; }
+.drawing-guide-panel button, .selection-proportions button { border: 1px solid #ffffff26; border-radius: 7px; padding: 5px 9px; background: #ffffff0b; color: inherit; cursor: pointer; }
+.drawing-guide-panel input:not([type=checkbox]):not([type=range]), .drawing-guide-panel select, .selection-proportions input { width: 100%; min-width: 0; background: #17181c; color: inherit; border: 1px solid #ffffff26; border-radius: 5px; padding: 4px; }
+.drawing-guide-panel :focus-visible, .selection-proportions :focus-visible { outline: 2px solid #86bfff; outline-offset: 2px; }
+.guide-actions { display: flex; align-items: center; gap: 8px; }.guide-actions span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guide-comparison-scroll { overflow: auto; max-height: 360px; }.guide-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.guide-comparison svg { width: 100%; display: block; background: #202020; cursor: crosshair; image-rendering: pixelated; touch-action: none; }
+.guide-fields { display: flex; gap: 8px; }.guide-fields label { flex: 1; min-width: 0; }
+.guide-mark-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.drawing-guide-panel fieldset { border: 1px solid #ffffff18; border-radius: 8px; padding: 8px; display: grid; gap: 8px; min-width: 0; }
+.guide-range { display: flex; align-items: center; gap: 12px; }.guide-range input { flex: 1; min-width: 0; }
+.drawing-guide-panel p, .selection-proportions small { margin: 0; color: #b1b3be; }.drawing-guide-panel table { width: 100%; font-size: 11px; border-collapse: collapse; }.drawing-guide-panel th { text-align: left; font-weight: 500; }.drawing-guide-panel td { text-align: right; }.drawing-guide-panel td, .drawing-guide-panel th { padding: 5px 2px; border-bottom: 1px solid #ffffff10; }.drawing-guide-panel caption { text-align: left; color: #b1b3be; margin-bottom: 4px; }
+.drawing-guide-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; image-rendering: pixelated; z-index: 4; }
+.selection-proportions { left: 20px; bottom: 90px; width: min(350px, calc(100vw - 40px)); padding: 12px; display: grid; gap: 8px; }
+@media(max-width: 700px) { .drawing-guide-panel { top: 110px; right: 10px; width: min(380px, calc(100vw - 20px)); max-height: calc(100dvh - 210px); }.selection-proportions { left: 10px; } }
+.drawing-guide-panel { resize: both; min-width: 300px; max-width: calc(100vw - 20px); }
+.drawing-guide-panel header { cursor: grab; touch-action: none; position: sticky; top: 0; background: #232428; z-index: 1; }
+.drawing-guide-panel header:active { cursor: grabbing; }
+.drawing-guide-panel.minimized { height: auto !important; min-height: 0; resize: none; width: 300px; }
+.guide-palette { display: flex; flex-wrap: wrap; gap: 4px; }.guide-palette button { padding: 0; width: 18px; height: 18px; border-radius: 4px; }
+.guide-actions button[aria-pressed=true] { background: #3b536f; border-color: #86bfff; }

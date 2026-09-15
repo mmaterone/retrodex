@@ -26,6 +26,7 @@ Default URL: `http://127.0.0.1:5175`
 - `GET /runs/:id/editor`
 - `PUT /runs/:id/editor`
 - `GET /runs/:id/editor/status`
+- `GET /runs/:id/editor/drawing-guide`
 - `GET /runs/:id/editor/selection`
 - `PUT /runs/:id/editor/selection`
 - `PATCH /runs/:id/editor/operations`

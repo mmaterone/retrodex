@@ -379,3 +379,121 @@ Ask before:
 
 Do not ask for routine deterministic reads, previews, inspections, operation
 log checks, or narrow CLI edits that exactly match the user's instruction.
+
+## Observe / draw / verify
+
+`observe <runId> [frameId]` collects the selected (or explicit) frame's exact
+pixel grid, canvas, masks, selection, timeline, inspection and absolute preview
+URLs. It includes the revision to use for the next edit. If the editor changes
+while the command reads it, observation fails; re-observe instead of using mixed
+state. Preview URLs are live views, not immutable snapshots.
+
+For agent drawing, inspect the preview at native scale and nearest-neighbor
+zoom. Build in small stages: silhouette, material color regions, facial or
+object details, then shading. Use existing `tools` operations with the returned
+`--expected-revision`, respect the selection and protected masks, and observe
+again after each meaningful batch. Heuristic face/eye features are candidates,
+not confirmed semantic masks. Check readability visually as well as pixel data.
+
+## Vision-to-pixel planning
+
+Use `vision plan <runId> [frameId] --source /absolute/source.png --colors 18`
+for a deterministic editable draft. Defaults are `cropMode: contain`,
+`sampling: nearest`, and `edgeDarkening: false`. Use `--sampling smooth` for
+continuous-tone references and explicit `--crop cover` when cropping is intended.
+This planner does not infer the hidden grid; use the ingest grid-inference path
+when the logical canvas is unknown.
+
+The planner preserves existing transparency, ignores invisible colors during
+quantization and applies the color budget after optional edge darkening.
+Background detection runs before resizing; uncertain backgrounds remain intact
+with a diagnostic. `--json '{"preserveBackground":true}'` keeps scene backgrounds.
+Photo-to-sprite conversion remains a heuristic draft, not semantic segmentation.
+
+`vision apply` accepts the same options plus `--expected-revision`. It saves a
+checkpoint and an operation log entry. Apply must match the existing canvas;
+preview can explore other sizes without changing frame or mask geometry.
+
+## Drawing silhouettes, symmetry, and mask colors
+
+New drawing operations use the same revision-guarded `editor/operations` API
+and operation history as the existing tools. `observe` before and after each
+batch. New operations clip destination writes to the active pixel selection
+(or selection bounds when no pixel mask exists), explicit target masks, and the
+canvas. Masks with `regenerationPolicy.locked` protect their pixels regardless
+of visibility. Mask-layer selection alone does not define a paint region: pass
+`--masks` explicitly. Unknown masks and incompatible geometry return errors.
+
+Draw a filled contour from integer pixel-center vertices:
+
+```bash
+npm --workspace @retrodex/cli run dev -- tools polygon RUN FRAME \
+  --expected-revision REV --color '#506c98' \
+  --json '{"points":[{"x":8,"y":5},{"x":14,"y":3},{"x":15,"y":15},{"x":7,"y":15}]}'
+```
+
+`--mode outline --thickness 2` draws a two-pixel inward, four-connected border.
+Contours support concavity and even-odd filling. Vertices may be outside the
+canvas; clipping does not introduce a new contour on the canvas edge.
+
+Copy the left half through the vertical center of the canvas:
+
+```bash
+npm --workspace @retrodex/cli run dev -- tools mirror RUN FRAME \
+  --expected-revision REV --axis vertical \
+  --json '{"sourceBounds":{"x":0,"y":0,"width":16,"height":32}}'
+```
+
+Mirror copies from the state before the operation, so overlapping source and
+destination regions do not smear. The source remains in place except where it
+is also a destination. `--axis horizontal` mirrors top/bottom. The default axis
+is `(dimension - 1) / 2`; `--axis-position 15.5` sets a custom axis in pixel-center
+coordinates. Transparent source cells are skipped unless `--copy-transparent`
+is supplied. Selection and target masks constrain destinations, not source reads.
+
+Paint or shade the union of explicit masks:
+
+```bash
+npm --workspace @retrodex/cli run dev -- tools paint-mask RUN FRAME \
+  --expected-revision REV --masks armor,helmet --color '#344565' --respect-alpha
+```
+
+`--respect-alpha` leaves currently transparent destination cells untouched.
+Without it the operation can fill empty pixels inside the masks. Pass
+`--json '{"color":null}'` without `--color` to erase inside the same constraints.
+Polygon and mirror also accept `--masks` and `--respect-alpha`.
+
+Each successful batch saves frame PNGs, updates the palette, and records exact
+before/after patches. Use `operations list RUN` and `operations revert RUN ID`
+to undo the drawing batch. Incremental drawing still needs visual judgment:
+compare the native-scale silhouette and the magnified details after each stage.
+
+## Reference-guided proportions
+
+Before detailed portrait drawing, open `GET /runs/:id/editor/drawing-guide`.
+The editor's **Reference · R** panel persists the source image, placement and
+paired landmarks in `document.drawingGuide`. References are view-only overlays;
+they never enter pixel grids or exports. The comparison views share zoom.
+
+Use `PATCH /runs/:id/editor/operations` with the latest `expectedRevision` and
+`{ "type": "set-drawing-guide", "guide": ... }` to replace the guide. A reference
+contains a PNG/JPEG/WebP data URL (maximum 6 million characters), a placement
+rectangle in canvas pixels, opacity and an overlay toggle. Landmark `reference`
+coordinates are normalized to the original image (0–1); `artwork` coordinates
+are canvas pixels. Stable unique IDs connect points to measurements. Each
+measurement specifies `from`, `to`, `baselineFrom`, `baselineTo`, and `label`.
+The GET endpoint returns reference/artwork distance ratios and percent difference;
+missing points and zero baselines return null, never a passing score.
+
+Start with silhouette and 3–4 colors. Compare hair/face, eye spacing/face,
+shoulders/face and hairline–nose/face before adding detail. Placement width is
+uniform scale; X/Y can position the relevant subject from a larger reference.
+
+For correction use an explicit pixel selection, switch to **Transform · V**, and
+set width, height, X/Y movement and rotation in **Selection proportions**. Apply
+uses nearest-neighbor sampling about the selection center, preserves pixels
+outside source/destination, rejects changes touching locked masks, and supports
+Undo. For agents use the existing `transform-pixels` operation with bounds, mask,
+origin, scale, rotation and translation. After modifying anatomy, update artwork
+landmarks to the new positions before comparing again. Ratios are geometric
+feedback, not an automatic judgment of artistic quality.

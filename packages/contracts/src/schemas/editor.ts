@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { drawingGuideSchema } from "./drawing-guide";
 
 import {
   anchorSchema,
@@ -103,6 +104,7 @@ export const editorSelectionStateSchema = z
   .default({});
 
 export const editorDocumentSchema = z.object({
+  drawingGuide: drawingGuideSchema.optional(),
   activeMaskLayerId: z.string().min(1).nullable(),
   canvas: canvasSizeSchema,
   createdAt: isoDateTimeSchema,
@@ -143,7 +145,41 @@ const toolNameSchema = z.enum([
   "transform",
 ]);
 
+const drawingTargetFields = {
+  frameId: z.string().min(1),
+  respectAlpha: z.boolean().default(false),
+  targetMaskLayerIds: z.array(z.string().min(1)).default([]),
+};
+
+const polygonPointSchema = z.object({
+  x: z.number().int().min(-65536).max(65536),
+  y: z.number().int().min(-65536).max(65536),
+});
+
 export const editorOperationSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("set-drawing-guide"), guide: drawingGuideSchema }),
+  z.object({
+    ...drawingTargetFields,
+    color: pixelCellSchema,
+    mode: z.enum(["fill", "outline"]).default("fill"),
+    points: z.array(polygonPointSchema).min(3).max(256),
+    thickness: z.number().int().min(1).max(32).default(1),
+    type: z.literal("polygon-pixels"),
+  }),
+  z.object({
+    ...drawingTargetFields,
+    axis: z.enum(["vertical", "horizontal"]).default("vertical"),
+    axisPosition: z.number().finite().multipleOf(0.5).optional(),
+    copyTransparent: z.boolean().default(false),
+    sourceBounds: editorBoundsSchema,
+    type: z.literal("mirror-pixels"),
+  }),
+  z.object({
+    ...drawingTargetFields,
+    color: pixelCellSchema,
+    targetMaskLayerIds: z.array(z.string().min(1)).min(1),
+    type: z.literal("paint-mask"),
+  }),
   z.object({
     color: pixelCellSchema,
     frameId: z.string().min(1),
@@ -293,6 +329,68 @@ export const pixelGridResponseSchema = z.object({
 export const pixelGridWriteRequestSchema = z.object({
   expectedRevision: z.number().int().nonnegative().optional(),
   grid: pixelGridSchema,
+});
+
+export const visionToPixelRequestSchema = z.object({
+  alphaThreshold: z.number().int().min(0).max(255).default(8),
+  canvas: canvasSizeSchema.optional(),
+  cropMode: z.enum(["contain", "cover"]).default("contain"),
+  edgeDarkening: z.boolean().default(false),
+  sampling: z.enum(["nearest", "smooth"]).default("nearest"),
+  expectedRevision: z.number().int().nonnegative().optional(),
+  frameId: z.string().min(1).optional(),
+  maxColors: z.number().int().min(2).max(32).default(18),
+  preserveBackground: z.boolean().default(false),
+  sourcePath: z.string().min(1),
+  styleHints: z.array(z.string().min(1)).default([]),
+});
+
+export const visionToPixelFeatureSchema = z.object({
+  bbox: bboxSchema.nullable(),
+  confidence: z.number().min(0).max(1),
+  description: z.string().min(1),
+  id: z.string().min(1),
+  kind: z.enum([
+    "background",
+    "beard-candidate",
+    "eye-candidate",
+    "face-candidate",
+    "glasses-candidate",
+    "hair-candidate",
+    "hood-candidate",
+    "palette-cluster",
+    "silhouette",
+  ]),
+  pixels: z.array(editorPointSchema).default([]),
+});
+
+export const visionToPixelPlanSchema = z.object({
+  alphaBBox: bboxSchema.nullable(),
+  canvas: canvasSizeSchema,
+  diagnostics: z.array(
+    z.object({
+      code: z.string().min(1),
+      message: z.string().min(1),
+      severity: z.enum(["error", "info", "warning"]),
+    })
+  ),
+  features: z.array(visionToPixelFeatureSchema),
+  grid: pixelGridSchema,
+  humanSummary: z.string().min(1),
+  palette: z.array(rgbColorSchema),
+  recommendations: z.array(z.string()),
+  sourcePath: z.string().min(1),
+});
+
+export const visionToPixelPlanResponseSchema = z.object({
+  plan: visionToPixelPlanSchema,
+});
+
+export const visionToPixelApplyResponseSchema = z.object({
+  document: editorDocumentSchema,
+  frameId: z.string().min(1),
+  operationId: z.string().min(1).nullable(),
+  plan: visionToPixelPlanSchema,
 });
 
 export const visualFeatureSchema = z.object({
@@ -761,6 +859,7 @@ export const editorOperationLogEntrySchema = z.object({
     "operation-revert",
     "pixel-write",
     "snapshot",
+    "vision-to-pixel",
   ]),
   patches: z.array(editorOperationPatchSchema),
   reason: z.string().default(""),
@@ -969,3 +1068,8 @@ export type ImagegenApplyPreview = z.infer<typeof imagegenApplyPreviewSchema>;
 export type PixelCell = z.infer<typeof pixelCellSchema>;
 export type PixelGrid = z.infer<typeof pixelGridSchema>;
 export type VisualSummary = z.infer<typeof visualSummarySchema>;
+export type VisionToPixelApplyResponse = z.infer<
+  typeof visionToPixelApplyResponseSchema
+>;
+export type VisionToPixelPlan = z.infer<typeof visionToPixelPlanSchema>;
+export type VisionToPixelRequest = z.infer<typeof visionToPixelRequestSchema>;

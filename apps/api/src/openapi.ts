@@ -906,9 +906,40 @@ const schemas: Record<string, unknown> = {
     required: ["bounds", "frameId", "type"],
     type: "object",
   },
+  DrawingGuide: {
+    type: "object", additionalProperties: false,
+    properties: {
+      reference: { oneOf: [{ type: "null" }, {
+        type: "object", additionalProperties: false,
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 200 },
+          dataUrl: { type: "string", maxLength: 6000000, pattern: "^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$" },
+          x: { type: "number" }, y: { type: "number" }, width: { type: "number", exclusiveMinimum: 0 }, height: { type: "number", exclusiveMinimum: 0 },
+          opacity: { type: "number", minimum: 0, maximum: 1, default: 0.45 }, overlay: { type: "boolean", default: false },
+        }, required: ["name", "dataUrl", "x", "y", "width", "height"],
+      }] },
+      landmarks: { type: "array", maxItems: 64, items: { type: "object", additionalProperties: false,
+        properties: {
+          id: { type: "string", minLength: 1, maxLength: 80 }, label: { type: "string", minLength: 1, maxLength: 100 },
+          reference: { oneOf: [{ type: "null" }, { type: "object", additionalProperties: false, properties: { x: { type: "number", minimum: 0, maximum: 1 }, y: { type: "number", minimum: 0, maximum: 1 } }, required: ["x", "y"] }] },
+          artwork: { oneOf: [{ type: "null" }, { $ref: "#/components/schemas/EditorPoint" }] },
+        }, required: ["id", "label", "reference", "artwork"],
+      } },
+      measurements: { type: "array", maxItems: 64, items: { type: "object", additionalProperties: false,
+        properties: { label: { type: "string", minLength: 1, maxLength: 100 }, from: { type: "string" }, to: { type: "string" }, baselineFrom: { type: "string" }, baselineTo: { type: "string" } },
+        required: ["label", "from", "to", "baselineFrom", "baselineTo"],
+      } },
+    },
+  },
+  EditorSetDrawingGuideOperation: {
+    type: "object", additionalProperties: false,
+    properties: { type: { const: "set-drawing-guide" }, guide: { $ref: "#/components/schemas/DrawingGuide" } },
+    required: ["type", "guide"],
+  },
   EditorDocument: {
     additionalProperties: false,
     properties: {
+      drawingGuide: { $ref: "#/components/schemas/DrawingGuide" },
       activeMaskLayerId: { type: ["string", "null"] },
       canvas: { $ref: "#/components/schemas/CanvasSize" },
       createdAt: { format: "date-time", type: "string" },
@@ -1209,8 +1240,64 @@ const schemas: Record<string, unknown> = {
     required: ["layerId", "points", "type"],
     type: "object",
   },
+  EditorPolygonPixelsOperation: {
+    additionalProperties: false,
+    properties: {
+      color: { $ref: "#/components/schemas/PixelCell" },
+      frameId: { minLength: 1, type: "string" },
+      respectAlpha: { type: "boolean", default: false },
+      targetMaskLayerIds: { items: { minLength: 1, type: "string" }, type: "array", default: [] },
+      mode: { enum: ["fill", "outline"], default: "fill" },
+      thickness: { minimum: 1, maximum: 32, type: "integer", default: 1 },
+      points: {
+        type: "array", minItems: 3, maxItems: 256,
+        items: {
+          type: "object", additionalProperties: false,
+          properties: {
+            x: { type: "integer", minimum: -65536, maximum: 65536 },
+            y: { type: "integer", minimum: -65536, maximum: 65536 },
+          },
+          required: ["x", "y"],
+        },
+      },
+      type: { const: "polygon-pixels" },
+    },
+    required: ["color", "frameId", "points", "type"],
+    type: "object",
+  },
+  EditorMirrorPixelsOperation: {
+    additionalProperties: false,
+    properties: {
+      frameId: { minLength: 1, type: "string" },
+      respectAlpha: { type: "boolean", default: false },
+      targetMaskLayerIds: { items: { minLength: 1, type: "string" }, type: "array", default: [] },
+      axis: { enum: ["vertical", "horizontal"], default: "vertical" },
+      axisPosition: { type: "number", multipleOf: 0.5 },
+      copyTransparent: { type: "boolean", default: false },
+      sourceBounds: { $ref: "#/components/schemas/EditorTargetBounds" },
+      type: { const: "mirror-pixels" },
+    },
+    required: ["frameId", "sourceBounds", "type"],
+    type: "object",
+  },
+  EditorPaintMaskOperation: {
+    additionalProperties: false,
+    properties: {
+      color: { $ref: "#/components/schemas/PixelCell" },
+      frameId: { minLength: 1, type: "string" },
+      respectAlpha: { type: "boolean", default: false },
+      targetMaskLayerIds: { items: { minLength: 1, type: "string" }, type: "array", minItems: 1 },
+      type: { const: "paint-mask" },
+    },
+    required: ["color", "frameId", "targetMaskLayerIds", "type"],
+    type: "object",
+  },
   EditorOperation: {
     oneOf: [
+      { $ref: "#/components/schemas/EditorSetDrawingGuideOperation" },
+      { $ref: "#/components/schemas/EditorPolygonPixelsOperation" },
+      { $ref: "#/components/schemas/EditorMirrorPixelsOperation" },
+      { $ref: "#/components/schemas/EditorPaintMaskOperation" },
       { $ref: "#/components/schemas/EditorSetPixelOperation" },
       { $ref: "#/components/schemas/EditorPatchPixelsOperation" },
       { $ref: "#/components/schemas/EditorToolStrokeOperation" },
@@ -1253,6 +1340,7 @@ const schemas: Record<string, unknown> = {
           "operation-revert",
           "pixel-write",
           "snapshot",
+          "vision-to-pixel",
         ],
       },
       patches: {
@@ -2346,6 +2434,126 @@ const schemas: Record<string, unknown> = {
     required: ["grid"],
     type: "object",
   },
+  VisionToPixelApplyResponse: {
+    additionalProperties: false,
+    properties: {
+      document: { $ref: "#/components/schemas/EditorDocument" },
+      frameId: { minLength: 1, type: "string" },
+      operationId: { type: ["string", "null"] },
+      plan: { $ref: "#/components/schemas/VisionToPixelPlan" },
+    },
+    required: ["document", "frameId", "operationId", "plan"],
+    type: "object",
+  },
+  VisionToPixelDiagnostic: {
+    additionalProperties: false,
+    properties: {
+      code: { minLength: 1, type: "string" },
+      message: { minLength: 1, type: "string" },
+      severity: { enum: ["error", "info", "warning"] },
+    },
+    required: ["code", "message", "severity"],
+    type: "object",
+  },
+  VisionToPixelFeature: {
+    additionalProperties: false,
+    properties: {
+      bbox: {
+        anyOf: [
+          { $ref: "#/components/schemas/Frame/$defs/bbox" },
+          { type: "null" },
+        ],
+      },
+      confidence: { maximum: 1, minimum: 0, type: "number" },
+      description: { minLength: 1, type: "string" },
+      id: { minLength: 1, type: "string" },
+      kind: {
+        enum: [
+          "background",
+          "beard-candidate",
+          "eye-candidate",
+          "face-candidate",
+          "glasses-candidate",
+          "hair-candidate",
+          "hood-candidate",
+          "palette-cluster",
+          "silhouette",
+        ],
+      },
+      pixels: {
+        items: { $ref: "#/components/schemas/EditorPoint" },
+        type: "array",
+      },
+    },
+    required: ["bbox", "confidence", "description", "id", "kind", "pixels"],
+    type: "object",
+  },
+  VisionToPixelPlan: {
+    additionalProperties: false,
+    properties: {
+      alphaBBox: {
+        anyOf: [
+          { $ref: "#/components/schemas/Frame/$defs/bbox" },
+          { type: "null" },
+        ],
+      },
+      canvas: { $ref: "#/components/schemas/CanvasSize" },
+      diagnostics: {
+        items: { $ref: "#/components/schemas/VisionToPixelDiagnostic" },
+        type: "array",
+      },
+      features: {
+        items: { $ref: "#/components/schemas/VisionToPixelFeature" },
+        type: "array",
+      },
+      grid: { $ref: "#/components/schemas/PixelGrid" },
+      humanSummary: { minLength: 1, type: "string" },
+      palette: {
+        items: { pattern: "^#[0-9a-fA-F]{6}$", type: "string" },
+        type: "array",
+      },
+      recommendations: { items: { type: "string" }, type: "array" },
+      sourcePath: { minLength: 1, type: "string" },
+    },
+    required: [
+      "alphaBBox",
+      "canvas",
+      "diagnostics",
+      "features",
+      "grid",
+      "humanSummary",
+      "palette",
+      "recommendations",
+      "sourcePath",
+    ],
+    type: "object",
+  },
+  VisionToPixelPlanResponse: {
+    additionalProperties: false,
+    properties: {
+      plan: { $ref: "#/components/schemas/VisionToPixelPlan" },
+    },
+    required: ["plan"],
+    type: "object",
+  },
+  VisionToPixelRequest: {
+    additionalProperties: false,
+    properties: {
+      alphaThreshold: { maximum: 255, minimum: 0, type: "integer" },
+      canvas: { $ref: "#/components/schemas/CanvasSize" },
+      cropMode: { enum: ["contain", "cover"], default: "contain" },
+      edgeDarkening: { type: "boolean", default: false },
+      sampling: { enum: ["nearest", "smooth"], default: "nearest" },
+      expectedRevision: { minimum: 0, type: "integer" },
+      frameId: { minLength: 1, type: "string" },
+      maxColors: { maximum: 32, minimum: 2, type: "integer" },
+      preserveBackground: { type: "boolean" },
+      sourcePath: { minLength: 1, type: "string" },
+      styleHints: { items: { minLength: 1, type: "string" }, type: "array" },
+    },
+    required: ["sourcePath"],
+    type: "object",
+  },
   RecordImagegenResultRequest: {
     additionalProperties: false,
     properties: {
@@ -2730,6 +2938,20 @@ export const openApiDocument = {
         },
       },
     },
+    "/runs/{runId}/editor/drawing-guide": {
+      get: {
+        operationId: "getDrawingGuide",
+        parameters: [{ $ref: "#/components/parameters/runId" }],
+        responses: { "200": response("Reference placement, paired landmarks and normalized proportion differences", {
+          type: "object", properties: {
+            guide: { $ref: "#/components/schemas/DrawingGuide" }, revision: { type: "integer" },
+            measurements: { type: "array", items: { type: "object", properties: {
+              label: { type: "string" }, reference: { type: ["number", "null"] }, artwork: { type: ["number", "null"] }, deviationPercent: { type: ["number", "null"] },
+            } } },
+          }, required: ["guide", "measurements", "revision"],
+        }), ...errorResponses },
+      },
+    },
     "/runs/{runId}/editor/status": {
       get: {
         operationId: "getRunEditorStatus",
@@ -3051,6 +3273,37 @@ export const openApiDocument = {
         responses: {
           "200": response("Preview semantic edit intent patch", {
             $ref: "#/components/schemas/EditIntentPreviewResponse",
+          }),
+          ...errorResponses,
+        },
+      },
+    },
+    "/runs/{runId}/editor/vision-to-pixel/apply": {
+      post: {
+        operationId: "applyRunEditorVisionToPixel",
+        parameters: [{ $ref: "#/components/parameters/runId" }],
+        requestBody: jsonContent({
+          $ref: "#/components/schemas/VisionToPixelRequest",
+        }),
+        responses: {
+          "200": response(
+            "Applied deterministic vision-to-pixel planner output to a frame",
+            { $ref: "#/components/schemas/VisionToPixelApplyResponse" }
+          ),
+          ...errorResponses,
+        },
+      },
+    },
+    "/runs/{runId}/editor/vision-to-pixel/preview": {
+      post: {
+        operationId: "previewRunEditorVisionToPixel",
+        parameters: [{ $ref: "#/components/parameters/runId" }],
+        requestBody: jsonContent({
+          $ref: "#/components/schemas/VisionToPixelRequest",
+        }),
+        responses: {
+          "200": response("Preview deterministic vision-to-pixel planner", {
+            $ref: "#/components/schemas/VisionToPixelPlanResponse",
           }),
           ...errorResponses,
         },

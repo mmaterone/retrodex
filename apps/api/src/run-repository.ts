@@ -28,6 +28,9 @@ import {
   editIntentPreviewSchema,
   editIntentRequestSchema,
   editorOperationsRequestSchema,
+  visionToPixelApplyResponseSchema,
+  visionToPixelPlanResponseSchema,
+  visionToPixelRequestSchema,
   exportTargetSchema,
   frameSchema,
   imagegenRequestArtifactSchema,
@@ -78,11 +81,16 @@ import type {
   Run,
   SavedAnimation,
   VisualSummary,
+  VisionToPixelApplyResponse,
+  VisionToPixelPlan,
+  VisionToPixelRequest,
 } from "@retrodex/contracts";
 import { z } from "zod";
 
 import { readJsonFile, writeJsonAtomic } from "./json.js";
 import { resolveRunsDir } from "./paths.js";
+import { applyDrawingOperation, pixelAlphaBBox } from "./drawing-operations.js";
+
 import { ApiError } from "./errors.js";
 
 /* eslint-disable class-methods-use-this */
@@ -2350,6 +2358,109 @@ export class RunRepository {
     };
   }
 
+  async previewVisionToPixel(
+    runId: string,
+    inputValue: unknown
+  ): Promise<{ plan: VisionToPixelPlan }> {
+    const document = await this.readEditorDocument(runId);
+    const input = visionToPixelRequestSchema.parse({
+      canvas: document.canvas,
+      ...(typeof inputValue === "object" && inputValue ? inputValue : {}),
+    });
+    const run = await this.readRun(runId);
+    await mkdir(run.paths.pipelineDir, { recursive: true });
+    const { planVisionToPixelWithPython } = await import("./python-worker.js");
+    const plan = await planVisionToPixelWithPython({
+      payloadPath: safeResolveInside(
+        run.paths.pipelineDir,
+        `vision-to-pixel-${Date.now().toString(36)}.request.json`
+      ),
+      request: input,
+    });
+    return visionToPixelPlanResponseSchema.parse({ plan });
+  }
+
+  async applyVisionToPixel(
+    runId: string,
+    inputValue: unknown
+  ): Promise<VisionToPixelApplyResponse> {
+    const beforeDocument = await this.readEditorDocument(runId);
+    const input = visionToPixelRequestSchema.parse({
+      canvas: beforeDocument.canvas,
+      ...(typeof inputValue === "object" && inputValue ? inputValue : {}),
+    });
+    this.assertExpectedEditorRevision(beforeDocument, input.expectedRevision);
+    if (input.canvas && (input.canvas.width !== beforeDocument.canvas.width ||
+        input.canvas.height !== beforeDocument.canvas.height)) {
+      throw new ApiError("vision-canvas-mismatch",
+        "Apply must use the editor canvas size. Preview other sizes without changing existing frames or masks.", 400, true);
+    }
+    const { plan } = await this.previewVisionToPixel(runId, input);
+    const frameId = input.frameId ?? beforeDocument.selectedFrameId;
+    if (!frameId) {
+      throw new ApiError(
+        "editor-frame-required",
+        "Vision-to-pixel apply requires a frameId or selected editor frame.",
+        400,
+        true
+      );
+    }
+    const frameIndex = beforeDocument.frames.findIndex(
+      (frame) => frame.frameId === frameId
+    );
+    if (frameIndex === -1) {
+      throw new ApiError(
+        "editor-frame-not-found",
+        `Editor frame not found: ${frameId}`,
+        404,
+        true
+      );
+    }
+    const nextFrames = beforeDocument.frames.map((frame, index) =>
+      index === frameIndex
+        ? {
+            ...frame,
+            alphaBBox: plan.alphaBBox,
+            grid: this.normalizePixelGrid(plan.grid),
+            name: `${frame.name} - vision plan`,
+          }
+        : frame
+    );
+    this.assertExpectedEditorRevision(await this.readEditorDocument(runId), beforeDocument.saveState.revision);
+    const checkpoint = await this.createEditorCheckpoint(runId, {
+      label: "Before vision-to-pixel apply",
+      reason: "Preserve the editor before replacing the selected frame.",
+      source: "agent",
+    });
+    const nextDocument = await this.writeEditorDocument({
+      ...beforeDocument,
+      canvas: plan.canvas,
+      frames: nextFrames,
+      selectedFrameId: frameId,
+      selection: {
+        ...beforeDocument.selection,
+        selectedFrameId: frameId,
+        selectedPixelsMask: null,
+        transformTarget: "frame",
+      },
+    }, { expectedRevision: beforeDocument.saveState.revision });
+    const operation = await this.recordEditorOperationFromDocuments(runId, {
+      afterDocument: nextDocument,
+      beforeDocument,
+      label: "Vision-to-pixel planner apply",
+      operationType: "vision-to-pixel",
+      checkpointId: checkpoint.id,
+      reason: plan.humanSummary,
+      source: "agent",
+    });
+    return visionToPixelApplyResponseSchema.parse({
+      document: nextDocument,
+      frameId,
+      operationId: operation?.id ?? null,
+      plan,
+    });
+  }
+
   async writeJob(job: PersistentJob): Promise<PersistentJob> {
     const timestamp = nowIso();
     const parsedJob = jobSchema.parse({ ...job, updatedAt: timestamp });
@@ -2614,6 +2725,10 @@ export class RunRepository {
     document: EditorDocument,
     operation: EditorOperation
   ): EditorDocument {
+    if (operation.type === "set-drawing-guide") return { ...document, drawingGuide: operation.guide };
+    if (operation.type === "polygon-pixels" || operation.type === "mirror-pixels" || operation.type === "paint-mask") {
+      return applyDrawingOperation(document, operation);
+    }
     if (operation.type === "select-frame") {
       return document.frames.some(
         (frame) => frame.frameId === operation.frameId
@@ -4377,6 +4492,7 @@ export function RetrodexPixelPreview() {
         }
         return {
           ...frame,
+          alphaBBox: pixelAlphaBBox(cells, frame.grid.size),
           grid: this.normalizePixelGrid({ ...frame.grid, cells }),
         };
       }),

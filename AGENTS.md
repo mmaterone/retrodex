@@ -60,3 +60,13 @@ If a rule seems missing, add it to contracts or presets before relying on it.
 The TypeScript API owns orchestration and validation. The Python worker owns
 deterministic image processing only. Worker output must be validated against
 the shared schemas before being written into a run folder.
+
+## Manual Drawing Proportions
+
+Before detailing manual artwork, read the editor's `drawing-guide` endpoint and
+compare the reference with the current silhouette. Use paired landmarks and
+normalized measurements for face, head width, hair width, and shoulder spacing;
+missing landmarks are not a successful check. Keep the first pass to silhouette
+and a few values. Correct proportions with selection transforms before adding
+texture. Recheck artwork landmarks after anatomy changes. Read
+`docs/agent-playbook.md` → Reference-guided proportions for the API contract.

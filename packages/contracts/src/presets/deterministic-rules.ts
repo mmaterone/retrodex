@@ -1,6 +1,8 @@
 import type { CleanupPipeline } from "../pipeline/cleanup-steps";
 import {
   controlGridCleanupPipeline,
+  nativePixelCleanupPipeline,
+  generatedArtworkCleanupPipeline,
   promptOnlySheetCleanupPipeline,
 } from "../pipeline/cleanup-steps";
 
@@ -8,7 +10,9 @@ export type PresetId =
   | "character.fighter.control-grid.v1"
   | "character.utya.prompt-sheet.v1"
   | "item.control-grid.v1"
-  | "fx.sheet.v1";
+  | "fx.sheet.v1"
+  | "artwork.native-pixel.v1"
+  | "artwork.imagegen-grid.v1";
 
 export interface DeterministicPreset {
   appliesTo: {
@@ -148,6 +152,36 @@ export const deterministicPresets: Record<PresetId, DeterministicPreset> = {
       gridMismatch: "reject",
       paletteDrift: "warn",
     },
+  },
+  "artwork.native-pixel.v1": {
+    id: "artwork.native-pixel.v1",
+    label: "Native editor pixel artwork",
+    appliesTo: { actions: ["native-drawing"], assetTypes: ["background", "character", "icon"] },
+    cleanupPipeline: nativePixelCleanupPipeline,
+    exportDefaults: { anchor: "center", canvasSize: 96, fps: 1 },
+    generationContract: {
+      background: "preserve-painted-background",
+      editableCanvases: 1,
+      grid: null,
+      referencesInsideEditableCanvas: false,
+      guidance: ["Draw exact logical pixels through editor operations.", "Preserve the chosen native canvas and painted background.", "Validate without resampling generated-style grids."],
+    },
+    qcPolicy: { anchorDrift: "warn", faceFeatureLoss: "reject", gridMismatch: "reject", paletteDrift: "warn" },
+  },
+  "artwork.imagegen-grid.v1": {
+    id: "artwork.imagegen-grid.v1",
+    label: "Generated opaque artwork with explicit 8x logical grid",
+    appliesTo: { actions: ["generated-artwork"], assetTypes: ["background"] },
+    cleanupPipeline: generatedArtworkCleanupPipeline,
+    exportDefaults: { anchor: "center", canvasSize: 128, fps: 1 },
+    generationContract: {
+      background: "preserve-painted-background-opaque",
+      editableCanvases: 1,
+      grid: null,
+      referencesInsideEditableCanvas: false,
+      guidance: ["One opaque artwork enlarged exactly 8x from a declared logical canvas.", "No antialiasing, texture, service lines or pasted reference panels.", "Use 24 flat colors; sample cell interiors and quantize automatically."],
+    },
+    qcPolicy: { anchorDrift: "warn", faceFeatureLoss: "reject", gridMismatch: "warn", paletteDrift: "warn" },
   },
 };
 
