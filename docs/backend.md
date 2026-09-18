@@ -454,3 +454,9 @@ npm run typecheck
 npm run build
 npm run smoke:api
 ```
+
+## 3D voxel module
+
+`/runs/:id/voxel` owns a separate revisioned document and undo history. Build,
+edit, render and export share typed geometry code with the web editor. See
+[voxel-studio.md](voxel-studio.md) for API/CLI contracts and persistence.

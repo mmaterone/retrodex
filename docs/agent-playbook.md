@@ -497,3 +497,11 @@ Undo. For agents use the existing `transform-pixels` operation with bounds, mask
 origin, scale, rotation and translation. After modifying anatomy, update artwork
 landmarks to the new positions before comparing again. Ratios are geometric
 feedback, not an automatic judgment of artistic quality.
+
+## 3D workflow
+
+Use `voxel show/build/operations/undo/render/export RUN`; read the independent
+3D revision before changing geometry. Supply cleaned, aligned native views,
+then inspect silhouettes and render front/side/three-quarter previews after
+edits. See [voxel-studio.md](voxel-studio.md). 3D turntables are direction renders,
+not generated character motion or skeletal animation.

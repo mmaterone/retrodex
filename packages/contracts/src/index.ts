@@ -8,3 +8,7 @@ export * from "./pipeline/cleanup-steps";
 export * from "./presets/deterministic-rules";
 
 export * from "./schemas/drawing-guide";
+export * from "./voxel/model";
+export * from "./voxel/core";
+export * from "./voxel/render";
+export * from "./voxel/pixzels";

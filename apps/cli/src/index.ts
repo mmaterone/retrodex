@@ -138,6 +138,29 @@ const run = async (): Promise<void> => {
     return;
   }
 
+  if (group === "voxel" && id) {
+    const base = `/runs/${encodeURIComponent(id)}/voxel`;
+    if (command === "show" || command === "export") {
+      print(await request(api, base + (command === "export" ? "/export" : "")));
+      return;
+    }
+    const routes: Record<string, { path: string; method: string }> = {
+      build: { path: "/build", method: "POST" },
+      replace: { path: "", method: "PUT" },
+      operations: { path: "/operations", method: "PATCH" },
+      redo: { path: "/redo", method: "POST" },
+      undo: { path: "/undo", method: "POST" },
+      render: { path: "/render", method: "POST" },
+    };
+    const route = routes[command ?? ""];
+    if (!route) throw new Error("Use voxel show/build/replace/operations/undo/redo/render/export RUN.");
+    print(await request(api, base + route.path, {
+      method: route.method,
+      body: JSON.stringify(expectedRevisionBody(args, objectJson(json))),
+    }));
+    return;
+  }
+
   if (group === "frames" && command === "add" && id) {
     print(
       await request(api, `/runs/${id}/frames`, {

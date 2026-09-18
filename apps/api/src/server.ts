@@ -12,12 +12,14 @@ import { ApiError, toApiError } from "./errors.js";
 import { JobRunner } from "./jobs.js";
 import { openApiDocument } from "./openapi.js";
 import { RunRepository } from "./run-repository.js";
+import { VoxelRepository } from "./voxel-repository.js";
 
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "5175", 10);
 const webUrl = process.env.WEB_URL ?? "http://127.0.0.1:5174";
 const repository = new RunRepository(process.env.RUNS_DIR);
 const jobs = new JobRunner(repository);
+const voxels = new VoxelRepository(repository);
 
 const sendJson = (
   response: ServerResponse,
@@ -820,6 +822,21 @@ const routeRequest = async (
   }
   if (request.method === "GET" && url.pathname === "/openapi.json") {
     sendJson(response, 200, openApiDocument);
+    return;
+  }
+  if (resource === "runs" && id && parts[3] === "voxel") {
+    const action = parts[4] ?? "";
+    let result: unknown;
+    if (request.method === "GET" && action === "") result = await voxels.get(id);
+    else if (request.method === "GET" && action === "export") result = await voxels.export(id);
+    else if (request.method === "PUT" && action === "") result = await voxels.replace(id, await readBody(request));
+    else if (request.method === "POST" && action === "build") result = await voxels.build(id, await readBody(request));
+    else if (request.method === "PATCH" && action === "operations") result = await voxels.operations(id, await readBody(request));
+    else if (request.method === "POST" && action === "redo") result = await voxels.redo(id, await readBody(request));
+    else if (request.method === "POST" && action === "undo") result = await voxels.undo(id, await readBody(request));
+    else if (request.method === "POST" && action === "render") result = await voxels.render(id, await readBody(request));
+    else throw new ApiError("route-not-found", "Unknown voxel route.", 404);
+    sendJson(response, 200, result);
     return;
   }
   if (resource === "local-exports" && (await routeLocalExportRequest(request, response))) {

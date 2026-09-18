@@ -2241,6 +2241,7 @@ export class RunRepository {
       for (const frame of document.frames) {
         await this.writePixelGrid(run.id, frame.frameId, { grid: frame.grid });
       }
+      await this.writeRun({ ...run, activeFrameIds: document.timeline.framesList });
     }
     return document;
   }
@@ -2327,7 +2328,24 @@ export class RunRepository {
       );
     }
     const run = await this.readRun(runId);
-    const frame = await this.readFrame(run, frameId);
+    let frame: Frame;
+    try {
+      frame = await this.readFrame(run, frameId);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      const document = await this.readEditorDocument(runId);
+      const index = document.frames.findIndex(item => item.frameId === frameId);
+      const source = document.frames[index];
+      if (!source) throw new Error(`Editor frame not found: ${frameId}`);
+      frame = frameSchema.parse({
+        id: frameId, index, name: source.name, canvas: input.grid.size,
+        path: this.framePngPath(run, frameId), alphaBBox: null,
+        anchor: source.anchor, approved: false, approvedAt: null,
+        palette: { colors: [], lockedTo: null },
+        qc: { passes: true, blockingIssues: [], warnings: [], retryHints: [] },
+        schemaVersion, source: { kind: "user-edited" },
+      });
+    }
     const { writePixelGridWithPython } = await import("./python-worker.js");
     const result = await writePixelGridWithPython({
       grid: input.grid,

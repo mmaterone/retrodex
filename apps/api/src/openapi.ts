@@ -1,3 +1,4 @@
+import { voxelOpenApiPaths, voxelOpenApiSchemas } from "./voxel-openapi.js";
 import animationDraftSchemaJson from "../../../packages/contracts/src/schemas/animation-draft.schema.json";
 import frameSchemaJson from "../../../packages/contracts/src/schemas/frame.schema.json";
 import runSchemaJson from "../../../packages/contracts/src/schemas/run.schema.json";
@@ -86,6 +87,7 @@ const exportTargets = [
 ] as const;
 
 const schemas: Record<string, unknown> = {
+  ...voxelOpenApiSchemas,
   AddFrameAutoSliceComponentsRequest: {
     additionalProperties: false,
     properties: {
@@ -2803,6 +2805,7 @@ export const openApiDocument = {
   },
   openapi: "3.1.0",
   paths: {
+    ...voxelOpenApiPaths,
     "/health": {
       get: {
         operationId: "getHealth",

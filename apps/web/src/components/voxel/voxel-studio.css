@@ -1,0 +1,430 @@
+.voxel-studio {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--pcc-background);
+  color: var(--pcc-foreground);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+.voxel-studio[hidden] {
+  display: none;
+}
+.voxel-studio button,
+.voxel-file,
+.voxel-studio select {
+  border: 1px solid var(--pcc-border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  padding: 8px 10px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.voxel-studio button:hover,
+.voxel-file:hover {
+  background: var(--surface-4);
+}
+.voxel-studio button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.voxel-studio button:focus-visible,
+.voxel-file:focus-within,
+.voxel-studio input:focus-visible {
+  outline: 2px solid #7abeff;
+  outline-offset: 2px;
+}
+.voxel-studio button[aria-pressed="true"],
+.voxel-studio .voxel-primary {
+  background: var(--pcc-active);
+  border-color: #729bbe66;
+}
+.voxel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--pcc-border);
+}
+.voxel-header strong {
+  font-size: 17px;
+}
+.voxel-header strong span {
+  color: #8ebde0;
+  margin-left: 5px;
+}
+.voxel-header small {
+  display: block;
+  color: var(--pcc-muted-foreground);
+  margin-top: 5px;
+}
+.voxel-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.voxel-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(300px, 1fr) 230px;
+  min-height: 0;
+  flex: 1;
+}
+.voxel-inputs,
+.voxel-output {
+  padding: 20px 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.voxel-inputs {
+  border-right: 1px solid var(--pcc-border);
+}
+.voxel-output {
+  border-left: 1px solid var(--pcc-border);
+}
+.voxel-studio h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0 0;
+}
+.voxel-studio h3 {
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.voxel-studio p {
+  color: var(--pcc-muted-foreground);
+  line-height: 1.5;
+  margin: 0;
+}
+.voxel-projections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+.voxel-projection {
+  border: 1px solid var(--pcc-border);
+  border-radius: 8px;
+  padding: 9px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.voxel-projection strong {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+.voxel-projection canvas {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  background: #121316;
+}
+.voxel-projection-empty {
+  height: 64px;
+  display: grid;
+  place-items: center;
+  color: var(--pcc-muted-foreground);
+  font-size: 10px;
+}
+.voxel-projection small {
+  font-size: 9px;
+  color: var(--pcc-muted-foreground);
+}
+.voxel-projection > div {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.voxel-projection button,
+.voxel-projection .voxel-file {
+  font-size: 9px;
+  padding: 4px;
+}
+.voxel-file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.voxel-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.voxel-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.voxel-tools {
+  padding: 14px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--pcc-border);
+}
+.voxel-tools button {
+  text-transform: capitalize;
+}
+.voxel-tools input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  background: transparent;
+  border: 1px solid var(--pcc-border);
+  border-radius: 5px;
+}
+.voxel-viewport {
+  flex: 1;
+  min-height: 180px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #242b31, #17191d 75%);
+}
+.voxel-viewport canvas {
+  width: min(100%, 60vh);
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: crosshair;
+}
+.voxel-empty {
+  text-align: center;
+}
+.voxel-empty strong {
+  display: block;
+  font-size: 21px;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+.voxel-hover {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  color: var(--pcc-muted-foreground);
+  font-size: 10px;
+}
+.voxel-camera {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 12px;
+  border-top: 1px solid var(--pcc-border);
+}
+.voxel-camera label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.voxel-camera input {
+  width: 90px;
+}
+.voxel-feedback {
+  min-height: 42px;
+  padding: 8px 14px;
+}
+.voxel-feedback .voxel-error {
+  color: #ffad99;
+}
+.voxel-output dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.voxel-output dt {
+  color: var(--pcc-muted-foreground);
+}
+.voxel-output dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.voxel-qc {
+  padding: 10px;
+  background: var(--surface-2);
+  border-radius: 7px;
+  font-size: 10px;
+}
+.voxel-studio input[type="number"] {
+  width: 56px;
+  padding: 5px;
+  margin-left: 6px;
+  border: 1px solid var(--pcc-border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: inherit;
+}
+.voxel-output select {
+  margin-left: 6px;
+}
+.voxel-output h2:not(:first-child) {
+  margin-top: 18px;
+}
+@media (max-width: 1000px) {
+  .voxel-layout {
+    grid-template-columns: 205px minmax(250px, 1fr) 190px;
+  }
+  .voxel-inputs,
+  .voxel-output {
+    padding: 12px;
+  }
+  .voxel-projection {
+    padding: 5px;
+  }
+}
+@media (max-width: 720px) {
+  .voxel-layout {
+    display: flex;
+    flex-wrap: wrap;
+    overflow: auto;
+  }
+  .voxel-main {
+    order: 0;
+    width: 100%;
+    height: 60vh;
+    min-height: 380px;
+  }
+  .voxel-inputs {
+    order: 1;
+    width: 50%;
+    overflow: visible;
+  }
+  .voxel-output {
+    order: 2;
+    width: 50%;
+    overflow: visible;
+  }
+  .voxel-header {
+    padding: 10px;
+  }
+  .voxel-header small {
+    display: none;
+  }
+}
+.voxel-row,
+.voxel-display {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.voxel-display {
+  padding: 8px 14px;
+  border-top: 1px solid var(--pcc-border);
+  font-size: 10px;
+}
+.voxel-display button {
+  padding: 5px 7px;
+}
+.voxel-display input[type="range"] {
+  width: 70px;
+  vertical-align: middle;
+}
+.voxel-display input[type="color"] {
+  width: 23px;
+  height: 23px;
+  vertical-align: middle;
+  border: 0;
+  padding: 0;
+}
+.voxel-viewport {
+  background-image: none;
+}
+.voxel-viewport.voxel-grid {
+  background-image:
+    linear-gradient(#ffffff09 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff09 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.voxel-selection-rect {
+  position: absolute;
+  border: 1px solid #81c7ff;
+  background: #81c7ff22;
+  pointer-events: none;
+}
+.voxel-selection-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.voxel-selection-controls > div:not(.voxel-row) {
+  display: grid;
+  grid-template-columns: 16px 1fr 1fr;
+  gap: 4px;
+  align-items: center;
+}
+.voxel-selection-controls label {
+  font-size: 10px;
+}
+.voxel-selection-controls input[type="number"] {
+  width: 43px;
+  margin-left: 3px;
+  padding: 3px;
+}
+.voxel-palette {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 100px;
+  overflow: auto;
+}
+.voxel-palette button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 4px;
+}
+.voxel-light {
+  --pcc-background: #e9edf1;
+  --pcc-foreground: #202733;
+  --pcc-muted-foreground: #526175;
+  --pcc-border: #b6c2cf;
+  --surface-2: #f4f6f8;
+  --surface-4: #dbe3eb;
+  --pcc-active: #c1d9ec;
+}
+.voxel-tools label {
+  display: flex;
+  align-items: center;
+}
+.voxel-tools input[type="number"] {
+  width: 42px;
+}
+.voxel-inputs > *,
+.voxel-output > * {
+  flex-shrink: 0;
+}
+.voxel-studio input[type="text"],
+.voxel-output > input:not([type]) {
+  padding: 7px 9px;
+  border: 1px solid var(--pcc-border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: inherit;
+}
+.voxel-inputs,
+.voxel-output {
+  scrollbar-color: #47505d transparent;
+  scrollbar-width: thin;
+}

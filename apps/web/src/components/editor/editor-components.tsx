@@ -143,6 +143,7 @@ interface CanvasSizeControlProps {
 }
 
 interface EditorModeTabsProps {
+  onOpen3D?: () => void;
   mode: EditorMode;
   onModeChange: (mode: EditorMode) => void;
 }
@@ -510,7 +511,7 @@ export const CanvasSizeControl = ({
   );
 };
 
-export const EditorModeTabs = ({ mode, onModeChange }: EditorModeTabsProps) => (
+export const EditorModeTabs = ({ mode, onModeChange, onOpen3D }: EditorModeTabsProps) => (
   <div aria-label="Editor mode" className="editor-mode-tabs">
     {(["edit", "mask"] as EditorMode[]).map((item) => (
       <button
@@ -523,6 +524,7 @@ export const EditorModeTabs = ({ mode, onModeChange }: EditorModeTabsProps) => (
         {item === "edit" ? "Edit" : "Mask"}
       </button>
     ))}
+    {onOpen3D && <button type="button" onClick={onOpen3D}>3D</button>}
   </div>
 );
 

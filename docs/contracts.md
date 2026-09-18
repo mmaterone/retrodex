@@ -344,3 +344,13 @@ at `GET /runs/:id/editor/drawing-guide`, and write with the revision-checked
 `set-drawing-guide` editor operation. Coordinates on the reference are normalized
 source coordinates, while artwork coordinates use canvas pixels. The UI saves
 through the existing document autosave and exposes an explicit retry button.
+
+## Voxel models
+
+`VoxelModel` describes a native cubic grid up to 64³, a shared palette, six
+per-cell face colors, source projections and a build recipe. The model has its
+own revision and undo history; it never replaces the 2D editor document.
+See [voxel-studio.md](voxel-studio.md) for coordinates, algorithms, import and
+render semantics. Invalid geometry and mismatched projection sizes fail rather
+than being resized. Rendered views enter the existing timeline as editable,
+unapproved frames.

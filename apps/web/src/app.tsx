@@ -1,3 +1,4 @@
+import { VoxelStudio } from "./components/voxel/voxel-studio";
 import { createPortraitGuide } from "@retrodex/contracts";
 import type { DrawingGuide } from "@retrodex/contracts";
 import { DrawingGuideOverlay, DrawingGuidePanel, SelectionProportions } from "./components/editor/drawing-guide-panel";
@@ -444,6 +445,8 @@ const canDeleteActiveTarget = (
 };
 
 export const App = () => {
+  const [voxelOpen, setVoxelOpen] = useState(false);
+  const [voxelMounted, setVoxelMounted] = useState(false);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const transformCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1891,6 +1894,7 @@ export const App = () => {
       return false;
     };
     const handleShortcut = (event: KeyboardEvent) => {
+      if (voxelOpen) return;
       if (event.defaultPrevented) {
         return;
       }
@@ -1990,6 +1994,7 @@ export const App = () => {
       window.removeEventListener("keyup", handleShortcut, { capture: true });
     };
   }, [
+    voxelOpen,
     fillTool,
     setActiveTool,
     setIsColorPanelOpen,
@@ -3020,6 +3025,7 @@ export const App = () => {
 
   return (
     <>
+      <div inert={voxelOpen} style={{ display: "contents" }}>
       <button
         aria-label="Export"
         className="export-open-button"
@@ -3030,7 +3036,7 @@ export const App = () => {
         <span>Export</span>
       </button>
       <CanvasSizeControl size={canvasSize} onResize={resizeCanvas} />
-      <EditorModeTabs mode={editorMode} onModeChange={setEditorMode} />
+      <EditorModeTabs mode={editorMode} onModeChange={setEditorMode} onOpen3D={() => { setIsPlaying(false); setVoxelMounted(true); setVoxelOpen(true); }} />
       {editorWorkspaceStatus.runId ? (
         <div className="editor-workspace-status">
           <span
@@ -3356,6 +3362,20 @@ export const App = () => {
           setIsShapeMenuOpen(false);
         }}
       />
+      </div>
+      {voxelMounted && <VoxelStudio active={voxelOpen} runId={editorWorkspaceStatus.runId} canvasSize={canvasSize}
+        currentFrame={() => ({ ...frames.find(f => f.id === selectedFrameId)!, grid: readGrid(), size: canvasSize })}
+        onClose={() => setVoxelOpen(false)}
+        onImport={(grids) => {
+          const added = grids.map(grid => createFrame({width: grid.width, height: grid.height}, grid.cells));
+          if (!added.length) return;
+          setFrames([...getSyncedFrames(), ...added]);
+          setSelectedFrameId(added[0].id);
+          clearSelectionState(); clearTransformPreview();
+          loadFrame(added[0]);
+          undoStackRef.current = []; redoStackRef.current = [];
+          setIsTimelineOpen(true); setVoxelOpen(false);
+        }} /> }
     </>
   );
 };

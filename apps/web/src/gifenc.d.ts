@@ -8,6 +8,10 @@ declare module "gifenc" {
       height: number,
       options: {
         delay?: number;
+        transparent?: boolean;
+        transparentIndex?: number;
+        dispose?: number;
+        repeat?: number;
         palette: number[][];
       }
     ) => void;

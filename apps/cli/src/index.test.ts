@@ -521,3 +521,12 @@ for (const sample of [
     } finally { server.close(); }
   });
 }
+
+test("CLI forwards 3D edit batches with the independent model revision",async()=>{
+  let body="";
+  const server=createServer((request,response)=>{
+    assert.equal(request.method,"PATCH");assert.equal(request.url,"/runs/run_3d/voxel/operations");
+    request.on("data",(chunk:Buffer)=>{body+=chunk.toString();});request.on("end",()=>{response.writeHead(200,{"Content-Type":"application/json"});response.end(JSON.stringify({revision:8,model:null}));});
+  });server.listen(0,"127.0.0.1");await once(server,"listening");
+  try{const address=server.address();assert.ok(address&&typeof address==="object");const operations=[{type:"extrude",points:[{x:1,y:2,z:3}],face:"front",distance:2}];const result=await runCli(["voxel","operations","run_3d","--expected-revision","7","--json",JSON.stringify({operations})],`http://127.0.0.1:${address.port}`).getOutput();assert.deepEqual(JSON.parse(body),{operations,expectedRevision:7});assert.equal(JSON.parse(result.stdout).revision,8);}finally{server.close();}
+});
